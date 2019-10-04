@@ -1,8 +1,16 @@
 # OpenAPI .NET SDK
 
+[![Nuget version (Tinkoff Trading OpenApi)](https://img.shields.io/nuget/v/Tinkoff.Trading.OpenApi.svg?style=flat-square)](https://www.nuget.org/packages/Tinkoff.Trading.OpenApi/)
+
 Данный проект представляет собой инструментарий на языке C# для работы с OpenAPI Тинькофф Инвестиции, который можно использовать для создания торговых роботов.
 
 ## Начало работы
+
+### Nuget
+
+SDK [доступен](https://www.nuget.org/packages/Tinkoff.Trading.OpenApi/) на nuget.org, для подключения добавьте в проект зависимость Tinkoff.Trading.OpenApi.
+
+### Сборка
 
 Для сборки вам потребуется совместимая с .netstandard 2.0 реализация .NET.
 Перейдите в директорию проекта и выполните следующую команду:
