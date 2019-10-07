@@ -5,6 +5,7 @@ namespace Tinkoff.Trading.OpenApi.Network
     public class ConnectionFactory
     {
         private const string BaseUri = "https://api-invest.tinkoff.ru/openapi/";
+        private const string SandboxBaseUri = "https://api-invest.tinkoff.ru/openapi/sandbox/";
         private const string WebSocketBaseUri = "wss://api-invest.tinkoff.ru/openapi/md/v1/md-openapi/ws";
         
         /// <summary>
@@ -24,7 +25,7 @@ namespace Tinkoff.Trading.OpenApi.Network
         /// <returns>Подключение к бирже в режиме песочницы.</returns>
         public static SandboxConnection GetSandboxConnection(string token)
         {
-            return new SandboxConnection(BaseUri, WebSocketBaseUri, token, new HttpClient());
+            return new SandboxConnection(SandboxBaseUri, WebSocketBaseUri, token, new HttpClient());
         }
     }
 }
