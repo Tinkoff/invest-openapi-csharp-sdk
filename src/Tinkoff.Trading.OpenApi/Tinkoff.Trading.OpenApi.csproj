@@ -3,6 +3,15 @@
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <Company>Tinkoff</Company>
+        <PackageVersion>1.0.2</PackageVersion>
+        <Title>Tinkoff Invest .NET SDK</Title>
+        <Authors>Nikita Kamensky</Authors>
+        <PackageProjectUrl>https://tinkoffcreditsystems.github.io/invest-openapi/</PackageProjectUrl>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/TinkoffCreditSystems/invest-openapi-csharp-sdk</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageTags>Tinkoff invest trading</PackageTags>
+        <Description>SDK for Tinkoff Invest</Description>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
