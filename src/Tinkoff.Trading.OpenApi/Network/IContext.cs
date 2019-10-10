@@ -11,6 +11,11 @@ namespace Tinkoff.Trading.OpenApi.Network
     public interface IContext
     {
         /// <summary>
+        /// Событие, возникающее при получении сообщения от WebSocket-клиента.
+        /// </summary>
+        event EventHandler<StreamingEventReceivedEventArgs> StreamingEventReceived;
+
+        /// <summary>
         /// Получение списка активных заявок.
         /// </summary>
         /// <returns>Список заявок.</returns>
@@ -70,15 +75,15 @@ namespace Tinkoff.Trading.OpenApi.Network
         /// </summary>
         /// <param name="figi">FIGI.</param>
         /// <returns></returns>
-        Task<MarketInstrument> MarketSearchByFigiAsync(string figi);
+        Task<MarketInstrumentList> MarketSearchByFigiAsync(string figi);
 
         /// <summary>
         /// Поиск инструмента по тикеру.
         /// </summary>
         /// <param name="ticker">Тикер.</param>
         /// <returns></returns>
-        Task<MarketInstrument> MarketSearchByTickerAsync(string ticker);
-        
+        Task<MarketInstrumentList> MarketSearchByTickerAsync(string ticker);
+
         /// <summary>
         /// Получение списка операций.
         /// </summary>
@@ -87,7 +92,7 @@ namespace Tinkoff.Trading.OpenApi.Network
         /// <param name="figi">FIGI инструмента для фильтрации.</param>
         /// <returns></returns>
         Task<List<Operation>> OperationsAsync(DateTime from, Interval interval, string figi);
-        
+
         /// <summary>
         /// Посылает запрос по streaming-протоколу.
         /// </summary>
