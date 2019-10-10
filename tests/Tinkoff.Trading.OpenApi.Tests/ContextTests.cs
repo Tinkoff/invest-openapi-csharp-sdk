@@ -331,51 +331,71 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketSearchByFigiTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\"}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\"}],\"total\":1}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
-            var instrument = await context.MarketSearchByFigiAsync("BBG000CL9VN6");
+            var instrumentList = await context.MarketSearchByFigiAsync("BBG000CL9VN6");
 
             Assert.NotNull(handler.RequestMessage);
             Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
             Assert.Equal(new Uri($"{BaseUri}market/search/by-figi?figi=BBG000CL9VN6"), handler.RequestMessage.RequestUri);
             Assert.Null(handler.RequestMessage.Content);
 
-            Assert.NotNull(instrument);
+            Assert.NotNull(instrumentList);
 
-            var expected = new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd);
+            var expected = new MarketInstrumentList(1, new List<MarketInstrument>
+            {
+                new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd)
+            });
+            Assert.Equal(expected.Total, instrumentList.Total);
+            Assert.Equal(expected.Instruments.Count, instrumentList.Instruments.Count);
 
-            Assert.Equal(expected.Figi, instrument.Figi);
-            Assert.Equal(expected.Ticker, instrument.Ticker);
-            Assert.Equal(expected.Isin, instrument.Isin);
-            Assert.Equal(expected.MinPriceIncrement, instrument.MinPriceIncrement);
-            Assert.Equal(expected.Lot, instrument.Lot);
-            Assert.Equal(expected.Currency, instrument.Currency);
+            for (var i = 0; i < expected.Instruments.Count; ++i)
+            {
+                var expectedInstrument = expected.Instruments[i];
+                var actualInstrument = instrumentList.Instruments[i];
+                Assert.Equal(expectedInstrument.Figi, actualInstrument.Figi);
+                Assert.Equal(expectedInstrument.Ticker, actualInstrument.Ticker);
+                Assert.Equal(expectedInstrument.Isin, actualInstrument.Isin);
+                Assert.Equal(expectedInstrument.MinPriceIncrement, actualInstrument.MinPriceIncrement);
+                Assert.Equal(expectedInstrument.Lot, actualInstrument.Lot);
+                Assert.Equal(expectedInstrument.Currency, actualInstrument.Currency);
+            }
         }
 
         [Fact]
         public async Task MarketSearchByTickerTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\"}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\"}],\"total\":1}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
-            var instrument = await context.MarketSearchByTickerAsync("NFLX");
+            var instrumentList = await context.MarketSearchByTickerAsync("NFLX");
 
             Assert.NotNull(handler.RequestMessage);
             Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
             Assert.Equal(new Uri($"{BaseUri}market/search/by-ticker?ticker=NFLX"), handler.RequestMessage.RequestUri);
             Assert.Null(handler.RequestMessage.Content);
 
-            Assert.NotNull(instrument);
+            Assert.NotNull(instrumentList);
 
-            var expected = new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd);
+            var expected = new MarketInstrumentList(1, new List<MarketInstrument>
+            {
+                new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd)
+            });
+            Assert.Equal(expected.Total, instrumentList.Total);
+            Assert.Equal(expected.Instruments.Count, instrumentList.Instruments.Count);
 
-            Assert.Equal(expected.Figi, instrument.Figi);
-            Assert.Equal(expected.Ticker, instrument.Ticker);
-            Assert.Equal(expected.Isin, instrument.Isin);
-            Assert.Equal(expected.MinPriceIncrement, instrument.MinPriceIncrement);
-            Assert.Equal(expected.Lot, instrument.Lot);
-            Assert.Equal(expected.Currency, instrument.Currency);
+            for (var i = 0; i < expected.Instruments.Count; ++i)
+            {
+                var expectedInstrument = expected.Instruments[i];
+                var actualInstrument = instrumentList.Instruments[i];
+                Assert.Equal(expectedInstrument.Figi, actualInstrument.Figi);
+                Assert.Equal(expectedInstrument.Ticker, actualInstrument.Ticker);
+                Assert.Equal(expectedInstrument.Isin, actualInstrument.Isin);
+                Assert.Equal(expectedInstrument.MinPriceIncrement, actualInstrument.MinPriceIncrement);
+                Assert.Equal(expectedInstrument.Lot, actualInstrument.Lot);
+                Assert.Equal(expectedInstrument.Currency, actualInstrument.Currency);
+            }
         }
 
         [Fact]

@@ -3,7 +3,7 @@
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <Company>Tinkoff</Company>
-        <PackageVersion>1.0.2</PackageVersion>
+        <PackageVersion>1.1.0</PackageVersion>
         <Title>Tinkoff Invest .NET SDK</Title>
         <Authors>Nikita Kamensky</Authors>
         <PackageProjectUrl>https://tinkoffcreditsystems.github.io/invest-openapi/</PackageProjectUrl>

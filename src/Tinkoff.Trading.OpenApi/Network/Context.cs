@@ -7,13 +7,16 @@ using Tinkoff.Trading.OpenApi.Models;
 
 namespace Tinkoff.Trading.OpenApi.Network
 {
-    public class Context : IContext
+    public class Context : IContext, IDisposable
     {
         protected readonly IConnection<Context> Connection;
+        
+        public event EventHandler<StreamingEventReceivedEventArgs> StreamingEventReceived;
 
         public Context(IConnection<Context> connection)
         {
             Connection = connection;
+            Connection.StreamingEventReceived += OnStreamingEventReceived;
         }
 
         public async Task<List<Models.Order>> OrdersAsync()
@@ -74,19 +77,19 @@ namespace Tinkoff.Trading.OpenApi.Network
             return response?.Payload;
         }
 
-        public async Task<MarketInstrument> MarketSearchByFigiAsync(string figi)
+        public async Task<MarketInstrumentList> MarketSearchByFigiAsync(string figi)
         {
             var figiParam = HttpUtility.UrlEncode(figi);
             var path = $"{Endpoints.MarketSearchByFigi}?figi={figiParam}";
-            var response = await Connection.SendGetRequestAsync<MarketInstrument>(path).ConfigureAwait(false);
+            var response = await Connection.SendGetRequestAsync<MarketInstrumentList>(path).ConfigureAwait(false);
             return response?.Payload;
         }
 
-        public async Task<MarketInstrument> MarketSearchByTickerAsync(string ticker)
+        public async Task<MarketInstrumentList> MarketSearchByTickerAsync(string ticker)
         {
             var tickerParam = HttpUtility.UrlEncode(ticker);
             var path = $"{Endpoints.MarketSearchByTicker}?ticker={tickerParam}";
-            var response = await Connection.SendGetRequestAsync<MarketInstrument>(path).ConfigureAwait(false);
+            var response = await Connection.SendGetRequestAsync<MarketInstrumentList>(path).ConfigureAwait(false);
             return response?.Payload;
         }
 
@@ -104,6 +107,18 @@ namespace Tinkoff.Trading.OpenApi.Network
             where T : StreamingRequest
         {
             await Connection.SendStreamingRequestAsync(request).ConfigureAwait(false);
+        }
+
+
+        private void OnStreamingEventReceived(object sender, StreamingEventReceivedEventArgs args)
+        {
+            var handler = StreamingEventReceived;
+            handler?.Invoke(this, args);
+        }
+
+        public void Dispose()
+        {
+            Connection.StreamingEventReceived -= OnStreamingEventReceived;
         }
 
         protected class EmptyPayload
