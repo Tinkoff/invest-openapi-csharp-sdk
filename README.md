@@ -17,6 +17,10 @@ SDK [доступен](https://www.nuget.org/packages/Tinkoff.Trading.OpenApi/) 
 ```bash
 dotnet build -c Release
 ```
+Или с помощью docker
+```bash
+docker run --rm  -v "$PWD":/home/dotnet/project -w  /home/dotnet/project mcr.microsoft.com/dotnet/core/sdk:3.0 dotnet build -c Release
+```
 После успешной сборки в поддиректрии `bin/Release/netstandard2.0` появится файл `Tinkoff.Trading.OpenApi.dll`, который можно подключить к любому другому .NET-проекту.
 
 ### Где взять токен аутентификации?

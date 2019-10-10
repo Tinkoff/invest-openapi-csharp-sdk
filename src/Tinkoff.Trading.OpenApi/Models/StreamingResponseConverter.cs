@@ -30,6 +30,8 @@ namespace Tinkoff.Trading.OpenApi.Models
                     return JsonConvert.DeserializeObject<OrderbookResponse>(jsonObject.ToString(), Settings);
                 case "instrument_info":
                     return JsonConvert.DeserializeObject<InstrumentInfoResponse>(jsonObject.ToString(), Settings);
+                case "error":
+                    return JsonConvert.DeserializeObject<StreamingErrorResponse>(jsonObject.ToString(), Settings);
                 default:
                     throw new ArgumentOutOfRangeException();
             }
