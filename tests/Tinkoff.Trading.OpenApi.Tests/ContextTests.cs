@@ -401,7 +401,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task OperationsTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":[{\"id\":\"12345687\",\"status\":\"Done\",\"trades\":[{\"tradeId\":\"12345687\",\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"price\":100.3,\"quantity\":15}],\"commission\":{\"currency\":\"RUB\",\"value\":21},\"currency\":\"RUB\",\"payment\":1504.5,\"price\":100.3,\"quantity\":15,\"figi\":\"BBG000CL9VN6\",\"instrumentType\":\"Stock\",\"isMarginCall\":true,\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"operationType\":\"Buy\"}]}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"operations\":[{\"id\":\"12345687\",\"status\":\"Done\",\"trades\":[{\"tradeId\":\"12345687\",\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"price\":100.3,\"quantity\":15}],\"commission\":{\"currency\":\"RUB\",\"value\":21},\"currency\":\"RUB\",\"payment\":1504.5,\"price\":100.3,\"quantity\":15,\"figi\":\"BBG000CL9VN6\",\"instrumentType\":\"Stock\",\"isMarginCall\":true,\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"operationType\":\"Buy\"}]}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var operations = await context.OperationsAsync(DateTime.Parse("2019-08-19T18:38:33.1316420+03:00"), Interval.Day, "BBG000CL9VN6");
