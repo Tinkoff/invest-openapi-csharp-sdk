@@ -99,8 +99,8 @@ namespace Tinkoff.Trading.OpenApi.Network
             var intervalParam = interval.ToParamString();
             var figiParam = HttpUtility.UrlEncode(figi);
             var path = $"{Endpoints.Operations}?from={fromParam}&interval={intervalParam}&figi={figiParam}";
-            var response = await Connection.SendGetRequestAsync<List<Operation>>(path).ConfigureAwait(false);
-            return response?.Payload;
+            var response = await Connection.SendGetRequestAsync<OperationList>(path).ConfigureAwait(false);
+            return response?.Payload?.Operations;
         }
 
         public async Task SendStreamingRequestAsync<T>(T request)
@@ -141,6 +141,17 @@ namespace Tinkoff.Trading.OpenApi.Network
                 Lots = lots;
                 Operation = operation;
                 Price = price;
+            }
+        }
+
+        private class OperationList
+        {
+            public List<Operation> Operations { get; }
+
+            [JsonConstructor]
+            public OperationList(List<Operation> operations)
+            {
+                Operations = operations;
             }
         }
 
