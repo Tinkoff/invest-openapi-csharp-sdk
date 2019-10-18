@@ -196,7 +196,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketStocksTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000BR37X2\",\"ticker\":\"PGR\",\"isin\":\"US7433151039\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\"}],\"total\":1}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000BR37X2\",\"ticker\":\"PGR\",\"isin\":\"US7433151039\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\",\"name\":\"Progressive\"}],\"total\":1}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var stocks = await context.MarketStocksAsync();
@@ -210,7 +210,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var expected = new MarketInstrumentList(1, new List<MarketInstrument>
             {
-                new MarketInstrument("BBG000BR37X2", "PGR", "US7433151039", 0.01m, 1, Currency.Usd)
+                new MarketInstrument("BBG000BR37X2", "PGR", "US7433151039", 0.01m, 1, Currency.Usd, "Progressive")
             });
             Assert.Equal(expected.Total, stocks.Total);
             Assert.Equal(expected.Instruments.Count, stocks.Instruments.Count);
@@ -231,7 +231,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketBondsTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG00FFH2SJ8\",\"ticker\":\"SU24019RMFS0\",\"isin\":\"RU000A0JX0J2\",\"minPriceIncrement\":0.001,\"lot\":1,\"currency\":\"RUB\"}],\"total\":1}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG00FFH2SJ8\",\"ticker\":\"SU24019RMFS0\",\"isin\":\"RU000A0JX0J2\",\"minPriceIncrement\":0.001,\"lot\":1,\"currency\":\"RUB\",\"name\":\"ОФЗ 24019\"}],\"total\":1}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var stocks = await context.MarketBondsAsync();
@@ -245,7 +245,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var expected = new MarketInstrumentList(1, new List<MarketInstrument>
             {
-                new MarketInstrument("BBG00FFH2SJ8", "SU24019RMFS0", "RU000A0JX0J2", 0.001m, 1, Currency.Rub)
+                new MarketInstrument("BBG00FFH2SJ8", "SU24019RMFS0", "RU000A0JX0J2", 0.001m, 1, Currency.Rub, "ОФЗ 24019")
             });
             Assert.Equal(expected.Total, stocks.Total);
             Assert.Equal(expected.Instruments.Count, stocks.Instruments.Count);
@@ -266,7 +266,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketEtfsTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG005HM5979\",\"ticker\":\"FXJP\",\"isin\":\"IE00BD3QJ310\",\"minPriceIncrement\":1,\"lot\":1,\"currency\":\"RUB\"}],\"total\":1}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG005HM5979\",\"ticker\":\"FXJP\",\"isin\":\"IE00BD3QJ310\",\"minPriceIncrement\":1,\"lot\":1,\"currency\":\"RUB\",\"name\":\"Акции японских компаний\"}],\"total\":1}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var stocks = await context.MarketEtfsAsync();
@@ -280,7 +280,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var expected = new MarketInstrumentList(1, new List<MarketInstrument>
             {
-                new MarketInstrument("BBG005HM5979", "FXJP", "IE00BD3QJ310", 1, 1, Currency.Rub)
+                new MarketInstrument("BBG005HM5979", "FXJP", "IE00BD3QJ310", 1, 1, Currency.Rub, "Акции японских компаний")
             });
             Assert.Equal(expected.Total, stocks.Total);
             Assert.Equal(expected.Instruments.Count, stocks.Instruments.Count);
@@ -301,7 +301,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketCurrenciesTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG0013HGFT4\",\"ticker\":\"USD000UTSTOM\",\"minPriceIncrement\":0.0025,\"lot\":1000,\"currency\":\"RUB\"},{\"figi\":\"BBG0013HJJ31\",\"ticker\":\"EUR_RUB__TOM\",\"minPriceIncrement\":0.0025,\"lot\":1000,\"currency\":\"RUB\"}],\"total\":2}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG0013HGFT4\",\"ticker\":\"USD000UTSTOM\",\"minPriceIncrement\":0.0025,\"lot\":1000,\"currency\":\"RUB\",\"name\":\"Доллар США\"},{\"figi\":\"BBG0013HJJ31\",\"ticker\":\"EUR_RUB__TOM\",\"minPriceIncrement\":0.0025,\"lot\":1000,\"currency\":\"RUB\",\"name\":\"Евро\"}],\"total\":2}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var stocks = await context.MarketCurrenciesAsync();
@@ -315,8 +315,8 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var expected = new MarketInstrumentList(2, new List<MarketInstrument>
             {
-                new MarketInstrument("BBG0013HGFT4", "USD000UTSTOM", null, 0.0025m, 1000, Currency.Rub),
-                new MarketInstrument("BBG0013HJJ31", "EUR_RUB__TOM", null, 0.0025m, 1000, Currency.Rub)
+                new MarketInstrument("BBG0013HGFT4", "USD000UTSTOM", null, 0.0025m, 1000, Currency.Rub, "Доллар США"),
+                new MarketInstrument("BBG0013HJJ31", "EUR_RUB__TOM", null, 0.0025m, 1000, Currency.Rub, "Евро")
             });
             Assert.Equal(expected.Total, stocks.Total);
             Assert.Equal(expected.Instruments.Count, stocks.Instruments.Count);
@@ -337,7 +337,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketSearchByFigiTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\"}],\"total\":1}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\",\"name\":\"Netflix\"}],\"total\":1}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var instrumentList = await context.MarketSearchByFigiAsync("BBG000CL9VN6");
@@ -351,7 +351,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var expected = new MarketInstrumentList(1, new List<MarketInstrument>
             {
-                new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd)
+                new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd, "Netflix")
             });
             Assert.Equal(expected.Total, instrumentList.Total);
             Assert.Equal(expected.Instruments.Count, instrumentList.Instruments.Count);
@@ -372,7 +372,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketSearchByTickerTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\"}],\"total\":1}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\",\"name\":\"Netflix\"}],\"total\":1}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var instrumentList = await context.MarketSearchByTickerAsync("NFLX");
@@ -386,7 +386,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var expected = new MarketInstrumentList(1, new List<MarketInstrument>
             {
-                new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd)
+                new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd, "Netflix")
             });
             Assert.Equal(expected.Total, instrumentList.Total);
             Assert.Equal(expected.Instruments.Count, instrumentList.Instruments.Count);
