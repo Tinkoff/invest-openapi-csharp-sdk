@@ -23,10 +23,21 @@ namespace Tinkoff.Trading.OpenApi.Models
             public decimal Blocked { get; }
             public MoneyAmount ExpectedYield { get; }
             public int Lots { get; }
-
+            public MoneyAmount AveragePositionPrice { get; }
+            public MoneyAmount AveragePositionPriceNoNkd { get; }
 
             [JsonConstructor]
-            public Position(string figi, string ticker, string isin, InstrumentType instrumentType, decimal balance, decimal blocked, MoneyAmount expectedYield, int lots)
+            public Position(
+                string figi,
+                string ticker,
+                string isin,
+                InstrumentType instrumentType,
+                decimal balance,
+                decimal blocked,
+                MoneyAmount expectedYield,
+                int lots,
+                MoneyAmount averagePositionPrice,
+                MoneyAmount averagePositionPriceNoNkd)
             {
                 Figi = figi;
                 Ticker = ticker;
@@ -36,6 +47,8 @@ namespace Tinkoff.Trading.OpenApi.Models
                 Blocked = blocked;
                 ExpectedYield = expectedYield;
                 Lots = lots;
+                AveragePositionPrice = averagePositionPrice;
+                AveragePositionPriceNoNkd = averagePositionPriceNoNkd;
             }
         }
     }

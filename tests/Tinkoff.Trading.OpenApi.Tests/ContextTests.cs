@@ -112,7 +112,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task PortfolioTest()
         {
-            const string response = "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"positions\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US0004026250\",\"instrumentType\":\"Stock\",\"balance\":10,\"blocked\":5,\"expectedYield\":{\"currency\":\"USD\",\"value\":10},\"lots\":10}]}}";
+            const string response = "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"positions\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US0004026250\",\"instrumentType\":\"Stock\",\"balance\":10,\"blocked\":5,\"expectedYield\":{\"currency\":\"USD\",\"value\":10},\"lots\":10,\"averagePositionPrice\":{\"currency\":\"USD\",\"value\":295.4},\"averagePositionPriceNoNkd\":{\"currency\":\"USD\",\"value\":292.4}}]}}";
             var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, response);
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
@@ -135,7 +135,9 @@ namespace Tinkoff.Trading.OpenApi.Tests
                     10,
                     5,
                     new MoneyAmount(Currency.Usd, 10),
-                    10)
+                    10,
+                    new MoneyAmount(Currency.Usd, 295.4m),
+                    new MoneyAmount(Currency.Usd, 292.4m))
             });
             Assert.Equal(expected.Positions.Count, portfolio.Positions.Count);
 
@@ -152,6 +154,10 @@ namespace Tinkoff.Trading.OpenApi.Tests
                 Assert.Equal(expectedPosition.ExpectedYield.Value, actualPosition.ExpectedYield.Value);
                 Assert.Equal(expectedPosition.ExpectedYield.Currency, actualPosition.ExpectedYield.Currency);
                 Assert.Equal(expectedPosition.Lots, actualPosition.Lots);
+                Assert.Equal(expectedPosition.AveragePositionPrice.Value, actualPosition.AveragePositionPrice.Value);
+                Assert.Equal(expectedPosition.AveragePositionPrice.Currency, actualPosition.AveragePositionPrice.Currency);
+                Assert.Equal(expectedPosition.AveragePositionPriceNoNkd.Value, actualPosition.AveragePositionPriceNoNkd.Value);
+                Assert.Equal(expectedPosition.AveragePositionPriceNoNkd.Currency, actualPosition.AveragePositionPriceNoNkd.Currency);
             }
         }
 
