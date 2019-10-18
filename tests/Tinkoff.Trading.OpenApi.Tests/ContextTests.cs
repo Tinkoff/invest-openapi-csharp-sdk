@@ -399,6 +399,44 @@ namespace Tinkoff.Trading.OpenApi.Tests
         }
 
         [Fact]
+        public async Task MarketCandlesTest()
+        {
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"payload\":{\"candles\":[{\"o\":299.5,\"c\":298.87,\"h\":299.59,\"l\":298.8,\"v\":18887,\"time\":\"2019-10-17T15:39Z\",\"interval\":\"1min\",\"figi\":\"BBG000CL9VN6\"}],\"interval\":\"1min\",\"figi\":\"BBG000CL9VN6\"},\"status\":\"Ok\"}");
+            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
+            var context = connection.Context;
+            var candles = await context.MarketCandlesAsync("BBG000CL9VN6", DateTime.Parse("2019-10-17T18:38:33.1316420+03:00"), DateTime.Parse("2019-10-17T18:39:33.1316420+03:00"), CandleInterval.Minute);
+
+            Assert.NotNull(handler.RequestMessage);
+            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
+            Assert.Equal(new Uri($"{BaseUri}market/candles?figi=BBG000CL9VN6&from={HttpUtility.UrlEncode("2019-10-17T18:38:33.1316420+03:00")}&to={HttpUtility.UrlEncode("2019-10-17T18:39:33.1316420+03:00")}&interval=1min"), handler.RequestMessage.RequestUri);
+            Assert.Null(handler.RequestMessage.Content);
+
+            Assert.NotNull(candles);
+
+            var expected = new CandleList("BBG000CL9VN6", CandleInterval.Minute, new List<CandlePayload>
+            {
+                new CandlePayload(299.5m, 298.87m, 299.59m, 298.8m, 18887, DateTime.Parse("2019-10-17T15:39Z").ToUniversalTime(), CandleInterval.Minute, "BBG000CL9VN6")
+            });
+            Assert.Equal(expected.Figi, candles.Figi);
+            Assert.Equal(expected.Interval, candles.Interval);
+            Assert.Equal(expected.Candles.Count, candles.Candles.Count);
+
+            for (var i = 0; i < expected.Candles.Count; ++i)
+            {
+                var expectedCandle = expected.Candles[i];
+                var actualCandle = candles.Candles[i];
+                Assert.Equal(expectedCandle.Time, actualCandle.Time);
+                Assert.Equal(expectedCandle.Interval, actualCandle.Interval);
+                Assert.Equal(expectedCandle.Figi, actualCandle.Figi);
+                Assert.Equal(expectedCandle.Open, actualCandle.Open);
+                Assert.Equal(expectedCandle.Close, actualCandle.Close);
+                Assert.Equal(expectedCandle.High, actualCandle.High);
+                Assert.Equal(expectedCandle.Low, actualCandle.Low);
+                Assert.Equal(expectedCandle.Volume, actualCandle.Volume);
+            }
+        }
+
+        [Fact]
         public async Task OperationsTest()
         {
             var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"operations\":[{\"id\":\"12345687\",\"status\":\"Done\",\"trades\":[{\"tradeId\":\"12345687\",\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"price\":100.3,\"quantity\":15}],\"commission\":{\"currency\":\"RUB\",\"value\":21},\"currency\":\"RUB\",\"payment\":1504.5,\"price\":100.3,\"quantity\":15,\"figi\":\"BBG000CL9VN6\",\"instrumentType\":\"Stock\",\"isMarginCall\":true,\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"operationType\":\"Buy\"}]}}");

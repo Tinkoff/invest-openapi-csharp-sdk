@@ -85,6 +85,16 @@ namespace Tinkoff.Trading.OpenApi.Network
         Task<MarketInstrumentList> MarketSearchByTickerAsync(string ticker);
 
         /// <summary>
+        /// Получение исторических значений свечей по FIGI.
+        /// </summary>
+        /// <param name="figi">FIGI.</param>
+        /// <param name="from">Начало временного промежутка.</param>
+        /// <param name="to">Конец временного промежутка.</param>
+        /// <param name="interval">Интервал свечи.</param>
+        /// <returns></returns>
+        Task<CandleList> MarketCandlesAsync(string figi, DateTime from, DateTime to, CandleInterval interval);
+
+        /// <summary>
         /// Получение списка операций.
         /// </summary>
         /// <param name="from">Начало временного промежутка.</param>
