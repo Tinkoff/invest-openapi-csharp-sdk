@@ -437,6 +437,75 @@ namespace Tinkoff.Trading.OpenApi.Tests
         }
 
         [Fact]
+        public async Task MarketOrderbookTest()
+        {
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"payload\":{\"figi\":\"BBG000CL9VN6\",\"depth\":5,\"tradeStatus\":\"NormalTrading\",\"minPriceIncrement\":0.01,\"lastPrice\":293.55,\"closePrice\":293.35,\"limitUp\":307.5,\"limitDown\":280.73,\"bids\":[{\"price\":293.44,\"quantity\":37},{\"price\":293.42,\"quantity\":9},{\"price\":293.4,\"quantity\":1},{\"price\":293.1,\"quantity\":35},{\"price\":293.09,\"quantity\":1}],\"asks\":[{\"price\":293.69,\"quantity\":1},{\"price\":293.72,\"quantity\":1},{\"price\":293.79,\"quantity\":35},{\"price\":293.8,\"quantity\":1},{\"price\":293.87,\"quantity\":20}]},\"status\":\"Ok\"}");
+            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
+            var context = connection.Context;
+            var orderbook = await context.MarketOrderbookAsync("BBG000CL9VN6", 5);
+
+            Assert.NotNull(handler.RequestMessage);
+            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
+            Assert.Equal(new Uri($"{BaseUri}market/orderbook?figi=BBG000CL9VN6&depth=5"), handler.RequestMessage.RequestUri);
+            Assert.Null(handler.RequestMessage.Content);
+
+            Assert.NotNull(orderbook);
+
+            var expected = new Orderbook(
+                5,
+                new List<OrderbookRecord>
+                {
+                    new OrderbookRecord(37, 293.44m),
+                    new OrderbookRecord(9, 293.42m),
+                    new OrderbookRecord(1, 293.4m),
+                    new OrderbookRecord(35, 293.1m),
+                    new OrderbookRecord(1, 293.09m)
+                },
+                new List<OrderbookRecord>
+                {
+                    new OrderbookRecord(1, 293.69m),
+                    new OrderbookRecord(1, 293.72m),
+                    new OrderbookRecord(35, 293.79m),
+                    new OrderbookRecord(1, 293.8m),
+                    new OrderbookRecord(20, 293.87m)
+                },
+                "BBG000CL9VN6",
+                TradeStatus.NormalTrading,
+                0.01m,
+                293.55m,
+                293.35m,
+                307.5m,
+                280.73m);
+            Assert.Equal(expected.Figi, orderbook.Figi);
+            Assert.Equal(expected.Depth, orderbook.Depth);
+            Assert.Equal(expected.TradeStatus, orderbook.TradeStatus);
+            Assert.Equal(expected.MinPriceIncrement, orderbook.MinPriceIncrement);
+            Assert.Equal(expected.LastPrice, orderbook.LastPrice);
+            Assert.Equal(expected.ClosePrice, orderbook.ClosePrice);
+            Assert.Equal(expected.LimitUp, orderbook.LimitUp);
+            Assert.Equal(expected.LimitDown, orderbook.LimitDown);
+            Assert.Equal(expected.Bids.Count, orderbook.Bids.Count);
+
+            for (var i = 0; i < expected.Bids.Count; ++i)
+            {
+                var expectedBid = expected.Bids[i];
+                var actualBid = orderbook.Bids[i];
+                Assert.Equal(expectedBid.Price, actualBid.Price);
+                Assert.Equal(expectedBid.Quantity, actualBid.Quantity);
+            }
+
+            Assert.Equal(expected.Asks.Count, orderbook.Asks.Count);
+
+            for (var i = 0; i < expected.Asks.Count; ++i)
+            {
+                var expectedAsk = expected.Asks[i];
+                var actualAsk = orderbook.Asks[i];
+                Assert.Equal(expectedAsk.Price, actualAsk.Price);
+                Assert.Equal(expectedAsk.Quantity, actualAsk.Quantity);
+            }
+        }
+
+        [Fact]
         public async Task OperationsTest()
         {
             var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"operations\":[{\"id\":\"12345687\",\"status\":\"Done\",\"trades\":[{\"tradeId\":\"12345687\",\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"price\":100.3,\"quantity\":15}],\"commission\":{\"currency\":\"RUB\",\"value\":21},\"currency\":\"RUB\",\"payment\":1504.5,\"price\":100.3,\"quantity\":15,\"figi\":\"BBG000CL9VN6\",\"instrumentType\":\"Stock\",\"isMarginCall\":true,\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"operationType\":\"Buy\"}]}}");

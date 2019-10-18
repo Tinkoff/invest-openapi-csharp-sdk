@@ -91,8 +91,16 @@ namespace Tinkoff.Trading.OpenApi.Network
         /// <param name="from">Начало временного промежутка.</param>
         /// <param name="to">Конец временного промежутка.</param>
         /// <param name="interval">Интервал свечи.</param>
-        /// <returns></returns>
+        /// <returns>Значения свечей.</returns>
         Task<CandleList> MarketCandlesAsync(string figi, DateTime from, DateTime to, CandleInterval interval);
+
+        /// <summary>
+        /// Получение стакана (книги заявок) по FIGI.
+        /// </summary>
+        /// <param name="figi">FIGI.</param>
+        /// <param name="depth">Глубина стакана.</param>
+        /// <returns>Книга заявок.</returns>
+        Task<Orderbook> MarketOrderbookAsync(string figi, int depth);
 
         /// <summary>
         /// Получение списка операций.
@@ -100,7 +108,7 @@ namespace Tinkoff.Trading.OpenApi.Network
         /// <param name="from">Начало временного промежутка.</param>
         /// <param name="interval">Длительность временного промежутка.</param>
         /// <param name="figi">FIGI инструмента для фильтрации.</param>
-        /// <returns></returns>
+        /// <returns>Список операций.</returns>
         Task<List<Operation>> OperationsAsync(DateTime from, Interval interval, string figi);
 
         /// <summary>

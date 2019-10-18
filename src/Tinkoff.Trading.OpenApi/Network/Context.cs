@@ -113,6 +113,14 @@ namespace Tinkoff.Trading.OpenApi.Network
             return response?.Payload;
         }
 
+        public async Task<Orderbook> MarketOrderbookAsync(string figi, int depth)
+        {
+            var figiParam = HttpUtility.UrlEncode(figi);
+            var path = $"{Endpoints.MarketOrderbook}?figi={figiParam}&depth={depth.ToString()}";
+            var response = await Connection.SendGetRequestAsync<Orderbook>(path).ConfigureAwait(false);
+            return response?.Payload;
+        }
+
         public async Task<List<Operation>> OperationsAsync(DateTime from, Interval interval, string figi)
         {
             var fromParam = HttpUtility.UrlEncode(from.ToString("yyyy-MM-dd"));
@@ -189,6 +197,7 @@ namespace Tinkoff.Trading.OpenApi.Network
             public const string MarketSearchByTicker = "market/search/by-ticker";
             public const string MarketSearchByFigi = "market/search/by-figi";
             public const string MarketCandles = "market/candles";
+            public const string MarketOrderbook = "market/orderbook";
             public const string Operations = "operations";
         }
     }
