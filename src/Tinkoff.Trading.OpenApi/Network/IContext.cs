@@ -106,6 +106,15 @@ namespace Tinkoff.Trading.OpenApi.Network
         /// Получение списка операций.
         /// </summary>
         /// <param name="from">Начало временного промежутка.</param>
+        /// <param name="to">Конец временного промежутка.</param>
+        /// <param name="figi">FIGI инструмента для фильтрации.</param>
+        /// <returns>Список операций.</returns>
+        Task<List<Operation>> OperationsAsync(DateTime from, DateTime to, string figi);
+
+        /// <summary>
+        /// Получение списка операций.
+        /// </summary>
+        /// <param name="from">Начало временного промежутка.</param>
         /// <param name="interval">Длительность временного промежутка.</param>
         /// <param name="figi">FIGI инструмента для фильтрации.</param>
         /// <returns>Список операций.</returns>

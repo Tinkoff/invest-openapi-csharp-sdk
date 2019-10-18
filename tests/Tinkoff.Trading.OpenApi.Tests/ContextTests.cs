@@ -506,7 +506,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         }
 
         [Fact]
-        public async Task OperationsTest()
+        public async Task OperationsIntervalTest()
         {
             var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"operations\":[{\"id\":\"12345687\",\"status\":\"Done\",\"trades\":[{\"tradeId\":\"12345687\",\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"price\":100.3,\"quantity\":15}],\"commission\":{\"currency\":\"RUB\",\"value\":21},\"currency\":\"RUB\",\"payment\":1504.5,\"price\":100.3,\"quantity\":15,\"figi\":\"BBG000CL9VN6\",\"instrumentType\":\"Stock\",\"isMarginCall\":true,\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"operationType\":\"Buy\"}]}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
@@ -571,6 +571,75 @@ namespace Tinkoff.Trading.OpenApi.Tests
                     Assert.Equal(expectedTrade.Quantity, actualTrade.Quantity);
                 }
             }
+        }      
+        
+        [Fact]
+        public async Task OperationsRangeTest()
+        {
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"operations\":[{\"id\":\"12345687\",\"status\":\"Done\",\"trades\":[{\"tradeId\":\"12345687\",\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"price\":100.3,\"quantity\":15}],\"commission\":{\"currency\":\"RUB\",\"value\":21},\"currency\":\"RUB\",\"payment\":1504.5,\"price\":100.3,\"quantity\":15,\"figi\":\"BBG000CL9VN6\",\"instrumentType\":\"Stock\",\"isMarginCall\":true,\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"operationType\":\"Buy\"}]}}");
+            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
+            var context = connection.Context;
+            var operations = await context.OperationsAsync(DateTime.Parse("2019-08-19T18:38:33.1316420+03:00"), DateTime.Parse("2019-08-19T18:48:33.1316420+03:00"), "BBG000CL9VN6");
+
+            Assert.NotNull(handler.RequestMessage);
+            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
+            Assert.Equal(new Uri($"{BaseUri}operations?from={HttpUtility.UrlEncode("2019-08-19T18:38:33.1316420+03:00")}&to={HttpUtility.UrlEncode("2019-08-19T18:48:33.1316420+03:00")}&figi=BBG000CL9VN6"), handler.RequestMessage.RequestUri);
+            Assert.Null(handler.RequestMessage.Content);
+
+            Assert.NotNull(operations);
+
+            var expected = new List<Operation>
+            {
+                new Operation(
+                    "12345687",
+                    OperationStatus.Done,
+                    new List<Trade>
+                    {
+                        new Trade("12345687", DateTime.Parse("2019-08-19T18:38:33.131642+03:00"), 100.3m, 15)
+                    },
+                    new MoneyAmount(Currency.Rub, 21),
+                    Currency.Rub,
+                    1504.5m,
+                    100.3m,
+                    15,
+                    "BBG000CL9VN6",
+                    InstrumentType.Stock,
+                    true,
+                    DateTime.Parse("2019-08-19T18:38:33.131642+03:00"),
+                    ExtendedOperationType.Buy)
+            };
+            Assert.Equal(expected.Count, operations.Count);
+
+            for (var i = 0; i < expected.Count; ++i)
+            {
+                var expectedOperation = expected[i];
+                var actualOperation = operations[i];
+                Assert.Equal(expectedOperation.Id, actualOperation.Id);
+                Assert.Equal(expectedOperation.Status, actualOperation.Status);
+                Assert.Equal(expectedOperation.Commission.Value, actualOperation.Commission.Value);
+                Assert.Equal(expectedOperation.Commission.Currency, actualOperation.Commission.Currency);
+                Assert.Equal(expectedOperation.Currency, actualOperation.Currency);
+                Assert.Equal(expectedOperation.Payment, actualOperation.Payment);
+                Assert.Equal(expectedOperation.Price, actualOperation.Price);
+                Assert.Equal(expectedOperation.Quantity, actualOperation.Quantity);
+                Assert.Equal(expectedOperation.Figi, actualOperation.Figi);
+                Assert.Equal(expectedOperation.InstrumentType, actualOperation.InstrumentType);
+                Assert.Equal(expectedOperation.IsMarginCall, actualOperation.IsMarginCall);
+                Assert.Equal(expectedOperation.Date, actualOperation.Date);
+                Assert.Equal(expectedOperation.OperationType, actualOperation.OperationType);
+
+                Assert.Equal(expectedOperation.Trades.Count, actualOperation.Trades.Count);
+                for (var j = 0; j < expectedOperation.Trades.Count; ++j)
+                {
+                    var expectedTrade = expectedOperation.Trades[j];
+                    var actualTrade = actualOperation.Trades[j];
+                    Assert.Equal(expectedTrade.TradeId, actualTrade.TradeId);
+                    Assert.Equal(expectedTrade.Date, actualTrade.Date);
+                    Assert.Equal(expectedTrade.Price, actualTrade.Price);
+                    Assert.Equal(expectedTrade.Quantity, actualTrade.Quantity);
+                }
+            }
         }
+
     }
 }

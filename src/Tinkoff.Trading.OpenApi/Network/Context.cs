@@ -13,7 +13,7 @@ namespace Tinkoff.Trading.OpenApi.Network
     public class Context : IContext, IDisposable
     {
         protected readonly IConnection<Context> Connection;
-        
+
         public event EventHandler<StreamingEventReceivedEventArgs> StreamingEventReceived;
 
         public Context(IConnection<Context> connection)
@@ -102,11 +102,11 @@ namespace Tinkoff.Trading.OpenApi.Network
             var fromParam = HttpUtility.UrlEncode(from.ToString("o"));
             var toParam = HttpUtility.UrlEncode(to.ToString("O"));
             var intervalString = typeof(CandleInterval)
-                .GetTypeInfo()
-                .DeclaredMembers
-                .SingleOrDefault(i => i.Name == interval.ToString())
-                ?.GetCustomAttribute<EnumMemberAttribute>(false)
-                ?.Value ?? string.Empty;
+                                     .GetTypeInfo()
+                                     .DeclaredMembers
+                                     .SingleOrDefault(i => i.Name == interval.ToString())
+                                     ?.GetCustomAttribute<EnumMemberAttribute>(false)
+                                     ?.Value ?? string.Empty;
             var intervalParam = HttpUtility.UrlEncode(intervalString);
             var path = $"{Endpoints.MarketCandles}?figi={figiParam}&from={fromParam}&to={toParam}&interval={intervalParam}";
             var response = await Connection.SendGetRequestAsync<CandleList>(path).ConfigureAwait(false);
@@ -119,6 +119,16 @@ namespace Tinkoff.Trading.OpenApi.Network
             var path = $"{Endpoints.MarketOrderbook}?figi={figiParam}&depth={depth.ToString()}";
             var response = await Connection.SendGetRequestAsync<Orderbook>(path).ConfigureAwait(false);
             return response?.Payload;
+        }
+
+        public async Task<List<Operation>> OperationsAsync(DateTime @from, DateTime to, string figi)
+        {
+            var fromParam = HttpUtility.UrlEncode(from.ToString("O"));
+            var toParam = HttpUtility.UrlEncode(to.ToString("O"));
+            var figiParam = HttpUtility.UrlEncode(figi);
+            var path = $"{Endpoints.Operations}?from={fromParam}&to={toParam}&figi={figiParam}";
+            var response = await Connection.SendGetRequestAsync<OperationList>(path).ConfigureAwait(false);
+            return response?.Payload?.Operations;
         }
 
         public async Task<List<Operation>> OperationsAsync(DateTime from, Interval interval, string figi)
