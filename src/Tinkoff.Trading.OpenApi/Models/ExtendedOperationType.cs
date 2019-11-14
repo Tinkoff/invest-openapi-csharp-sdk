@@ -6,11 +6,26 @@ namespace Tinkoff.Trading.OpenApi.Models
     [JsonConverter(typeof(StringEnumConverter))]
     public enum ExtendedOperationType
     {
+        BuyCard,
         Buy,
         Sell,
         BrokerCommission,
         ExchangeCommission,
         ServiceCommission,
-        MarginCommission
+        MarginCommission,
+        OtherCommission,
+        PayIn,
+        PayOut,
+        Tax,
+        TaxLucre,
+        TaxDividend,
+        TaxCoupon,
+        TaxBack,
+        Repayment,
+        PartRepayment,
+        Coupon,
+        Dividend,
+        SecurityIn,
+        SecurityOut
     }
 }
