@@ -57,7 +57,4 @@ var portfolio = await context.PortfolioAsync();
 ### У меня есть вопрос
 
 [Основной репозиторий с документацией](https://github.com/TinkoffCreditSystems/invest-openapi/) — в нем вы можете задать вопрос в Issues и получать информацию о релизах в Releases.
-Если возникают вопросы по данному SDK, нашёлся баг или есть предложения по улучшению, то можно задать его в Issues, либо писать на почту:
-* Мельникову Никите ( [n.v.melnikov@tinkoff.ru](mailto:n.v.melnikov@tinkoff.ru) )
-* Каменскому Никите ( [n.m.kamenskiy@tinkoff.ru](mailto:n.m.kamenskiy@tinkoff.ru) )
-
+Если возникают вопросы по данному SDK, нашёлся баг или есть предложения по улучшению, то можно задать его в Issues.
