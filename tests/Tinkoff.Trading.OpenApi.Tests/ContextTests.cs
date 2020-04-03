@@ -164,7 +164,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task PortfolioCurrenciesTest()
         {
-            const string response = "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"currencies\":[{\"currency\":\"EUR\",\"balance\":200.7,\"blocked\":100}]}}";
+            const string response = "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"currencies\":[{\"currency\":\"EUR\",\"balance\":200.7,\"blocked\":100}, {\"currency\":\"JPY\",\"balance\":42.2,\"blocked\":0}]}}";
             var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, response);
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
@@ -179,7 +179,8 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var expected = new PortfolioCurrencies(new List<PortfolioCurrencies.PortfolioCurrency>
             {
-                new PortfolioCurrencies.PortfolioCurrency(Currency.Eur, 200.7m, 100m)
+                new PortfolioCurrencies.PortfolioCurrency(Currency.Eur, 200.7m, 100m),
+                new PortfolioCurrencies.PortfolioCurrency(Currency.Jpy, 42.2m, 0m)
             });
             Assert.Equal(expected.Currencies.Count, portfolio.Currencies.Count);
 
