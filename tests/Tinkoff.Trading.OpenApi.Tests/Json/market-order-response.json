@@ -1,0 +1,16 @@
+﻿{
+  "trackingId": "QBASTAN",
+  "payload": {
+    "orderId": "40fcdfa2-084b-41bc-8f9d-3414a5eb9e8c",
+    "operation": "Buy",
+    "status": "Fill",
+    "requestedLots": 10,
+    "executedLots": 5,
+    "rejectReason": "That's Why",
+    "commission": {
+      "currency": "USD",
+      "value": 1.44
+    }
+  },
+  "status": "Ok"
+}

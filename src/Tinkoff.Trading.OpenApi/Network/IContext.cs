@@ -16,10 +16,17 @@ namespace Tinkoff.Trading.OpenApi.Network
         event EventHandler<StreamingEventReceivedEventArgs> StreamingEventReceived;
 
         /// <summary>
+        /// Получение брокерских счетов клиента.
+        /// </summary>
+        /// <returns>Список брокерских счетов.</returns>
+        Task<IReadOnlyCollection<Account>> AccountsAsync();
+
+        /// <summary>
         /// Получение списка активных заявок.
         /// </summary>
+        /// <param name="brokerAccountId">Номер счета (по умолчанию - Тинькофф).</param>
         /// <returns>Список заявок.</returns>
-        Task<List<Order>> OrdersAsync();
+        Task<List<Order>> OrdersAsync(string brokerAccountId = null);
 
         /// <summary>
         /// Размещение лимитной заявки.
@@ -29,22 +36,32 @@ namespace Tinkoff.Trading.OpenApi.Network
         Task<PlacedLimitOrder> PlaceLimitOrderAsync(LimitOrder limitOrder);
 
         /// <summary>
+        /// Создание рыночной заявки.
+        /// </summary>
+        /// <param name="marketOrder">Параметры отправляемой заявки.</param>
+        /// <returns>Параметры размещённой заявки.</returns>
+        Task<PlacedMarketOrder> PlaceMarketOrderAsync(MarketOrder marketOrder);
+
+        /// <summary>
         /// Отзыв лимитной заявки.
         /// </summary>
         /// <param name="id">Идентификатор заявки.</param>
-        Task CancelOrderAsync(string id);
+        /// <param name="brokerAccountId">Номер счета (по умолчанию - Тинькофф).</param>
+        Task CancelOrderAsync(string id, string brokerAccountId = null);
 
         /// <summary>
         /// Получение информации по портфелю инструментов.
         /// </summary>
+        /// <param name="brokerAccountId">Номер счета (по умолчанию - Тинькофф).</param>
         /// <returns>Портфель инструментов.</returns>
-        Task<Portfolio> PortfolioAsync();
+        Task<Portfolio> PortfolioAsync(string brokerAccountId = null);
 
         /// <summary>
         /// Получение информации по валютным активам.
         /// </summary>
+        /// <param name="brokerAccountId">Номер счета (по умолчанию - Тинькофф).</param>
         /// <returns>Валютные активы.</returns>
-        Task<PortfolioCurrencies> PortfolioCurrenciesAsync();
+        Task<PortfolioCurrencies> PortfolioCurrenciesAsync(string brokerAccountId = null);
 
         /// <summary>
         /// Получение списка акций, доступных для торговли.
@@ -108,8 +125,9 @@ namespace Tinkoff.Trading.OpenApi.Network
         /// <param name="from">Начало временного промежутка.</param>
         /// <param name="to">Конец временного промежутка.</param>
         /// <param name="figi">FIGI инструмента для фильтрации.</param>
+        /// <param name="brokerAccountId">Номер счета (по умолчанию - Тинькофф).</param>
         /// <returns>Список операций.</returns>
-        Task<List<Operation>> OperationsAsync(DateTime from, DateTime to, string figi);
+        Task<List<Operation>> OperationsAsync(DateTime from, DateTime to, string figi, string brokerAccountId = null);
 
         /// <summary>
         /// Получение списка операций.
@@ -117,8 +135,9 @@ namespace Tinkoff.Trading.OpenApi.Network
         /// <param name="from">Начало временного промежутка.</param>
         /// <param name="interval">Длительность временного промежутка.</param>
         /// <param name="figi">FIGI инструмента для фильтрации.</param>
+        /// <param name="brokerAccountId">Номер счета (по умолчанию - Тинькофф).</param>
         /// <returns>Список операций.</returns>
-        Task<List<Operation>> OperationsAsync(DateTime from, Interval interval, string figi);
+        Task<List<Operation>> OperationsAsync(DateTime from, Interval interval, string figi, string brokerAccountId = null);
 
         /// <summary>
         /// Посылает запрос по streaming-протоколу.

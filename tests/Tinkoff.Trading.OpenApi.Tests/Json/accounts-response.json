@@ -1,0 +1,16 @@
+﻿{
+  "trackingId": "QBASTAN",
+  "payload": {
+    "accounts": [
+      {
+        "brokerAccountType": "Tinkoff",
+        "brokerAccountId": "SB000000"
+      },
+      {
+        "brokerAccountType": "TinkoffIis",
+        "brokerAccountId": "SB000001"
+      }
+    ]
+  },
+  "status": "Ok"
+}

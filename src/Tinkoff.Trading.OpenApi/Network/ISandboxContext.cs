@@ -9,27 +9,39 @@ namespace Tinkoff.Trading.OpenApi.Network
     public interface ISandboxContext : IContext
     {
         /// <summary>
-        /// Регистрацияя в песочнице.
+        /// Регистрация в песочнице.
         /// </summary>
-        Task RegisterAsync();
+        /// <param name="brokerAccountType">
+        /// Тип счета.
+        /// </param>
+        Task<SandboxAccount> RegisterAsync(BrokerAccountType? brokerAccountType);
 
         /// <summary>
         /// Установка значения валютного актива.
         /// </summary>
         /// <param name="currency">Валюта.</param>
         /// <param name="balance">Желаемое значение.</param>
-        Task SetCurrencyBalanceAsync(Currency currency, decimal balance);
+        /// <param name="brokerAccountId">Номер счета (по умолчанию - Тинькофф).</param>
+        Task SetCurrencyBalanceAsync(Currency currency, decimal balance, string brokerAccountId = null);
 
         /// <summary>
         /// Установка позиции по инструменту.
         /// </summary>
         /// <param name="figi">FIGI.</param>
         /// <param name="balance">Желаемое значение.</param>
-        Task SetPositionBalanceAsync(string figi, decimal balance);
+        /// <param name="brokerAccountId">Номер счета (по умолчанию - Тинькофф).</param>
+        Task SetPositionBalanceAsync(string figi, decimal balance, string brokerAccountId = null);
+
+        /// <summary>
+        /// Удаление счета клиента.
+        /// </summary>
+        /// <param name="brokerAccountId">Номер счета (по умолчанию - Тинькофф).</param>
+        Task RemoveAsync(string brokerAccountId = null);
 
         /// <summary>
         /// Сброс всех установленных значений по активам.
         /// </summary>
-        Task ClearAsync();
+        /// <param name="brokerAccountId">Номер счета (по умолчанию - Тинькофф).</param>
+        Task ClearAsync(string brokerAccountId = null);
     }
 }

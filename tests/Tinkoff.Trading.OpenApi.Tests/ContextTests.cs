@@ -4,8 +4,11 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
+using FluentAssertions;
+using FluentAssertions.Json;
 using Tinkoff.Trading.OpenApi.Models;
 using Tinkoff.Trading.OpenApi.Network;
+using Tinkoff.Trading.OpenApi.Tests.Json;
 using Xunit;
 
 namespace Tinkoff.Trading.OpenApi.Tests
@@ -15,18 +18,38 @@ namespace Tinkoff.Trading.OpenApi.Tests
         private const string BaseUri = "https://api-invest.tinkoff.ru/openapi/";
         private const string WebSocketBaseUri = "wss://api-invest.tinkoff.ru/openapi/md/v1/md-openapi/ws";
         private const string Token = "";
+        private const string BrokerAccountId = "SB000000";
 
+        [Fact]
+        public async Task AccountsTest()
+        {
+            var (handler, context) = CreateStubs(JsonFile.Read("accounts-response"));
+
+            var response = await context.AccountsAsync();
+
+            handler.RequestMessage.Method.Should().Be(HttpMethod.Get);
+            handler.RequestMessage.RequestUri.Should().Be(new Uri($"{BaseUri}user/accounts"));
+            handler.RequestMessage.Should().NotBeNull();
+            handler.RequestMessage.Content.Should().BeNull();
+            var expectedResponse = new object[]
+            {
+                new Account(BrokerAccountType.Tinkoff, "SB000000"),
+                new Account(BrokerAccountType.TinkoffIis, "SB000001")
+            };
+            response.Should().BeEquivalentTo(expectedResponse);
+        }
+        
         [Fact]
         public async Task OrdersTest()
         {
             var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":[{\"orderId\":\"12345687\",\"figi\":\"BBG000CL9VN6\",\"operation\":\"Buy\",\"status\":\"New\",\"requestedLots\":10,\"executedLots\":0,\"type\":\"Limit\",\"price\":288.7}]}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
-            var orders = await context.OrdersAsync();
+            var orders = await context.OrdersAsync(BrokerAccountId);
 
             Assert.NotNull(handler.RequestMessage);
             Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}orders"), handler.RequestMessage.RequestUri);
+            Assert.Equal(new Uri($"{BaseUri}orders?brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
             Assert.Null(handler.RequestMessage.Content);
 
             var expected = new List<Order>
@@ -64,11 +87,11 @@ namespace Tinkoff.Trading.OpenApi.Tests
             var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"orderId\":\"12345687\",\"operation\":\"Sell\",\"status\":\"New\",\"rejectReason\":\"That's Why\",\"requestedLots\":10,\"executedLots\":0,\"commission\":{\"currency\":\"USD\",\"value\":1.44}}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
-            var placedLimitOrder = await context.PlaceLimitOrderAsync(new LimitOrder("BBG000CL9VN6", 10, OperationType.Sell, 288.3m));
+            var placedLimitOrder = await context.PlaceLimitOrderAsync(new LimitOrder("BBG000CL9VN6", 10, OperationType.Sell, 288.3m, BrokerAccountId));
 
             Assert.NotNull(handler.RequestMessage);
             Assert.Equal(HttpMethod.Post, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}orders/limit-order?figi=BBG000CL9VN6"), handler.RequestMessage.RequestUri);
+            Assert.Equal(new Uri($"{BaseUri}orders/limit-order?figi=BBG000CL9VN6&brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
             Assert.NotNull(handler.RequestMessage.Content);
 
             var content = await handler.RequestMessage.Content.ReadAsStringAsync();
@@ -95,32 +118,57 @@ namespace Tinkoff.Trading.OpenApi.Tests
         }
 
         [Fact]
+        public async Task PlaceMarketOrderTest()
+        {
+            var (handler, context) = CreateStubs(JsonFile.Read("market-order-response"));
+            var response = await context.PlaceMarketOrderAsync(new MarketOrder("BBG000CL9VN6", 10, OperationType.Buy, BrokerAccountId));
+
+            handler.RequestMessage.Method.Should().Be(HttpMethod.Post);
+            handler.RequestMessage.RequestUri.Should()
+                .Be(new Uri($"{BaseUri}orders/market-order?figi=BBG000CL9VN6&brokerAccountId={BrokerAccountId}"));
+            Assert.NotNull(handler.RequestMessage.Content);
+            
+            var request = await handler.RequestMessage.Content.ReadAsStringAsync();
+            request.Should().BeValidJson().Which.Should().BeEquivalentTo(JsonFile.Read("market-order-request"));
+
+            var expected = new PlacedMarketOrder(
+                "40fcdfa2-084b-41bc-8f9d-3414a5eb9e8c",
+                OperationType.Buy,
+                OrderStatus.Fill,
+                "That's Why",
+                10,
+                5,
+                new MoneyAmount(Currency.Usd, 1.44m));
+            response.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
         public async Task CancelOrderTest()
         {
             var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             const string orderId = "12345687";
-            await context.CancelOrderAsync(orderId);
+            await context.CancelOrderAsync(orderId, BrokerAccountId);
 
             Assert.NotNull(handler.RequestMessage);
             Assert.Equal(HttpMethod.Post, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}orders/cancel?orderId={orderId}"), handler.RequestMessage.RequestUri);
+            Assert.Equal(new Uri($"{BaseUri}orders/cancel?orderId={orderId}&brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
             Assert.Null(handler.RequestMessage.Content);
         }
 
         [Fact]
         public async Task PortfolioTest()
         {
-            const string response = "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"positions\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US0004026250\",\"instrumentType\":\"Stock\",\"balance\":10,\"blocked\":5,\"expectedYield\":{\"currency\":\"USD\",\"value\":10},\"lots\":10,\"averagePositionPrice\":{\"currency\":\"USD\",\"value\":295.4},\"averagePositionPriceNoNkd\":{\"currency\":\"USD\",\"value\":292.4}}]}}";
+            const string response = "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"positions\":[{\"name\":\"name\",\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US0004026250\",\"instrumentType\":\"Stock\",\"balance\":10,\"blocked\":5,\"expectedYield\":{\"currency\":\"USD\",\"value\":10},\"lots\":10,\"averagePositionPrice\":{\"currency\":\"USD\",\"value\":295.4},\"averagePositionPriceNoNkd\":{\"currency\":\"USD\",\"value\":292.4}}]}}";
             var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, response);
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
-            var portfolio = await context.PortfolioAsync();
+            var portfolio = await context.PortfolioAsync(BrokerAccountId);
 
             Assert.NotNull(handler.RequestMessage);
             Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}portfolio"), handler.RequestMessage.RequestUri);
+            Assert.Equal(new Uri($"{BaseUri}portfolio?brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
             Assert.Null(handler.RequestMessage.Content);
 
             Assert.NotNull(portfolio);
@@ -128,6 +176,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
             var expected = new Portfolio(new List<Portfolio.Position>
             {
                 new Portfolio.Position(
+                    "name",
                     "BBG000CL9VN6",
                     "NFLX",
                     "US0004026250",
@@ -168,11 +217,11 @@ namespace Tinkoff.Trading.OpenApi.Tests
             var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, response);
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
-            var portfolio = await context.PortfolioCurrenciesAsync();
+            var portfolio = await context.PortfolioCurrenciesAsync(BrokerAccountId);
 
             Assert.NotNull(handler.RequestMessage);
             Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}portfolio/currencies"), handler.RequestMessage.RequestUri);
+            Assert.Equal(new Uri($"{BaseUri}portfolio/currencies?brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
             Assert.Null(handler.RequestMessage.Content);
 
             Assert.NotNull(portfolio);
@@ -197,7 +246,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketStocksTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000BR37X2\",\"ticker\":\"PGR\",\"isin\":\"US7433151039\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\",\"name\":\"Progressive\"}],\"total\":1}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000BR37X2\",\"ticker\":\"PGR\",\"isin\":\"US7433151039\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\",\"name\":\"Progressive\",\"type\":\"Stock\"}],\"total\":1}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var stocks = await context.MarketStocksAsync();
@@ -211,7 +260,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var expected = new MarketInstrumentList(1, new List<MarketInstrument>
             {
-                new MarketInstrument("BBG000BR37X2", "PGR", "US7433151039", 0.01m, 1, Currency.Usd, "Progressive")
+                new MarketInstrument("BBG000BR37X2", "PGR", "US7433151039", 0.01m, 1, Currency.Usd, "Progressive", InstrumentType.Stock)
             });
             Assert.Equal(expected.Total, stocks.Total);
             Assert.Equal(expected.Instruments.Count, stocks.Instruments.Count);
@@ -232,7 +281,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketBondsTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG00FFH2SJ8\",\"ticker\":\"SU24019RMFS0\",\"isin\":\"RU000A0JX0J2\",\"minPriceIncrement\":0.001,\"lot\":1,\"currency\":\"RUB\",\"name\":\"ОФЗ 24019\"}],\"total\":1}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG00FFH2SJ8\",\"ticker\":\"SU24019RMFS0\",\"isin\":\"RU000A0JX0J2\",\"minPriceIncrement\":0.001,\"lot\":1,\"currency\":\"RUB\",\"name\":\"ОФЗ 24019\",\"type\":\"Bond\"}],\"total\":1}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var stocks = await context.MarketBondsAsync();
@@ -246,7 +295,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var expected = new MarketInstrumentList(1, new List<MarketInstrument>
             {
-                new MarketInstrument("BBG00FFH2SJ8", "SU24019RMFS0", "RU000A0JX0J2", 0.001m, 1, Currency.Rub, "ОФЗ 24019")
+                new MarketInstrument("BBG00FFH2SJ8", "SU24019RMFS0", "RU000A0JX0J2", 0.001m, 1, Currency.Rub, "ОФЗ 24019", InstrumentType.Bond)
             });
             Assert.Equal(expected.Total, stocks.Total);
             Assert.Equal(expected.Instruments.Count, stocks.Instruments.Count);
@@ -267,7 +316,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketEtfsTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG005HM5979\",\"ticker\":\"FXJP\",\"isin\":\"IE00BD3QJ310\",\"minPriceIncrement\":1,\"lot\":1,\"currency\":\"RUB\",\"name\":\"Акции японских компаний\"}],\"total\":1}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG005HM5979\",\"ticker\":\"FXJP\",\"isin\":\"IE00BD3QJ310\",\"minPriceIncrement\":1,\"lot\":1,\"currency\":\"RUB\",\"name\":\"Акции японских компаний\",\"type\":\"Etf\"}],\"total\":1}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var stocks = await context.MarketEtfsAsync();
@@ -281,7 +330,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var expected = new MarketInstrumentList(1, new List<MarketInstrument>
             {
-                new MarketInstrument("BBG005HM5979", "FXJP", "IE00BD3QJ310", 1, 1, Currency.Rub, "Акции японских компаний")
+                new MarketInstrument("BBG005HM5979", "FXJP", "IE00BD3QJ310", 1, 1, Currency.Rub, "Акции японских компаний", InstrumentType.Etf)
             });
             Assert.Equal(expected.Total, stocks.Total);
             Assert.Equal(expected.Instruments.Count, stocks.Instruments.Count);
@@ -302,7 +351,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketCurrenciesTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG0013HGFT4\",\"ticker\":\"USD000UTSTOM\",\"minPriceIncrement\":0.0025,\"lot\":1000,\"currency\":\"RUB\",\"name\":\"Доллар США\"},{\"figi\":\"BBG0013HJJ31\",\"ticker\":\"EUR_RUB__TOM\",\"minPriceIncrement\":0.0025,\"lot\":1000,\"currency\":\"RUB\",\"name\":\"Евро\"}],\"total\":2}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG0013HGFT4\",\"ticker\":\"USD000UTSTOM\",\"minPriceIncrement\":0.0025,\"lot\":1000,\"currency\":\"RUB\",\"name\":\"Доллар США\",\"type\":\"Currency\"},{\"figi\":\"BBG0013HJJ31\",\"ticker\":\"EUR_RUB__TOM\",\"minPriceIncrement\":0.0025,\"lot\":1000,\"currency\":\"RUB\",\"name\":\"Евро\",\"type\":\"Currency\"}],\"total\":2}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var stocks = await context.MarketCurrenciesAsync();
@@ -316,8 +365,8 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var expected = new MarketInstrumentList(2, new List<MarketInstrument>
             {
-                new MarketInstrument("BBG0013HGFT4", "USD000UTSTOM", null, 0.0025m, 1000, Currency.Rub, "Доллар США"),
-                new MarketInstrument("BBG0013HJJ31", "EUR_RUB__TOM", null, 0.0025m, 1000, Currency.Rub, "Евро")
+                new MarketInstrument("BBG0013HGFT4", "USD000UTSTOM", null, 0.0025m, 1000, Currency.Rub, "Доллар США", InstrumentType.Currency),
+                new MarketInstrument("BBG0013HJJ31", "EUR_RUB__TOM", null, 0.0025m, 1000, Currency.Rub, "Евро", InstrumentType.Currency)
             });
             Assert.Equal(expected.Total, stocks.Total);
             Assert.Equal(expected.Instruments.Count, stocks.Instruments.Count);
@@ -338,7 +387,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketSearchByFigiTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\",\"name\":\"Netflix\"}],\"total\":1}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\",\"name\":\"Netflix\",\"type\":\"Stock\"}],\"total\":1}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var instrumentList = await context.MarketSearchByFigiAsync("BBG000CL9VN6");
@@ -352,7 +401,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var expected = new MarketInstrumentList(1, new List<MarketInstrument>
             {
-                new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd, "Netflix")
+                new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd, "Netflix", InstrumentType.Stock)
             });
             Assert.Equal(expected.Total, instrumentList.Total);
             Assert.Equal(expected.Instruments.Count, instrumentList.Instruments.Count);
@@ -373,7 +422,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketSearchByTickerTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\",\"name\":\"Netflix\"}],\"total\":1}}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\",\"name\":\"Netflix\",\"type\":\"Stock\"}],\"total\":1}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var instrumentList = await context.MarketSearchByTickerAsync("NFLX");
@@ -387,7 +436,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var expected = new MarketInstrumentList(1, new List<MarketInstrument>
             {
-                new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd, "Netflix")
+                new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd, "Netflix", InstrumentType.Stock)
             });
             Assert.Equal(expected.Total, instrumentList.Total);
             Assert.Equal(expected.Instruments.Count, instrumentList.Instruments.Count);
@@ -446,7 +495,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public async Task MarketOrderbookTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"payload\":{\"figi\":\"BBG000CL9VN6\",\"depth\":5,\"tradeStatus\":\"NormalTrading\",\"minPriceIncrement\":0.01,\"lastPrice\":293.55,\"closePrice\":293.35,\"limitUp\":307.5,\"limitDown\":280.73,\"bids\":[{\"price\":293.44,\"quantity\":37},{\"price\":293.42,\"quantity\":9},{\"price\":293.4,\"quantity\":1},{\"price\":293.1,\"quantity\":35},{\"price\":293.09,\"quantity\":1}],\"asks\":[{\"price\":293.69,\"quantity\":1},{\"price\":293.72,\"quantity\":1},{\"price\":293.79,\"quantity\":35},{\"price\":293.8,\"quantity\":1},{\"price\":293.87,\"quantity\":20}]},\"status\":\"Ok\"}");
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"payload\":{\"figi\":\"BBG000CL9VN6\",\"depth\":5,\"tradeStatus\":\"NormalTrading\",\"minPriceIncrement\":0.01,\"faceValue\":293.55,\"lastPrice\":293.55,\"closePrice\":293.35,\"limitUp\":307.5,\"limitDown\":280.73,\"bids\":[{\"price\":293.44,\"quantity\":37},{\"price\":293.42,\"quantity\":9},{\"price\":293.4,\"quantity\":1},{\"price\":293.1,\"quantity\":35},{\"price\":293.09,\"quantity\":1}],\"asks\":[{\"price\":293.69,\"quantity\":1},{\"price\":293.72,\"quantity\":1},{\"price\":293.79,\"quantity\":35},{\"price\":293.8,\"quantity\":1},{\"price\":293.87,\"quantity\":20}]},\"status\":\"Ok\"}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
             var orderbook = await context.MarketOrderbookAsync("BBG000CL9VN6", 5);
@@ -479,6 +528,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
                 "BBG000CL9VN6",
                 TradeStatus.NormalTrading,
                 0.01m,
+                293.55m,
                 293.55m,
                 293.35m,
                 307.5m,
@@ -518,11 +568,11 @@ namespace Tinkoff.Trading.OpenApi.Tests
             var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"operations\":[{\"id\":\"12345687\",\"status\":\"Done\",\"trades\":[{\"tradeId\":\"12345687\",\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"price\":100.3,\"quantity\":15}],\"commission\":{\"currency\":\"RUB\",\"value\":21},\"currency\":\"RUB\",\"payment\":1504.5,\"price\":100.3,\"quantity\":15,\"figi\":\"BBG000CL9VN6\",\"instrumentType\":\"Stock\",\"isMarginCall\":true,\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"operationType\":\"Buy\"}]}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
-            var operations = await context.OperationsAsync(DateTime.Parse("2019-08-19T18:38:33.1316420+03:00"), Interval.Day, "BBG000CL9VN6");
+            var operations = await context.OperationsAsync(DateTime.Parse("2019-08-19T18:38:33.1316420+03:00"), Interval.Day, "BBG000CL9VN6", BrokerAccountId);
 
             Assert.NotNull(handler.RequestMessage);
             Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}operations?from={HttpUtility.UrlEncode("2019-08-19")}&interval=1day&figi=BBG000CL9VN6"), handler.RequestMessage.RequestUri);
+             Assert.Equal(new Uri($"{BaseUri}operations?from={HttpUtility.UrlEncode("2019-08-19")}&interval=1day&figi=BBG000CL9VN6&brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
             Assert.Null(handler.RequestMessage.Content);
 
             Assert.NotNull(operations);
@@ -586,11 +636,11 @@ namespace Tinkoff.Trading.OpenApi.Tests
             var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"operations\":[{\"id\":\"12345687\",\"status\":\"Done\",\"trades\":[{\"tradeId\":\"12345687\",\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"price\":100.3,\"quantity\":15}],\"commission\":{\"currency\":\"RUB\",\"value\":21},\"currency\":\"RUB\",\"payment\":1504.5,\"price\":100.3,\"quantity\":15,\"figi\":\"BBG000CL9VN6\",\"instrumentType\":\"Stock\",\"isMarginCall\":true,\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"operationType\":\"Buy\"}]}}");
             var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
             var context = connection.Context;
-            var operations = await context.OperationsAsync(DateTime.Parse("2019-08-19T18:38:33.1316420+03:00"), DateTime.Parse("2019-08-19T18:48:33.1316420+03:00"), "BBG000CL9VN6");
+            var operations = await context.OperationsAsync(DateTime.Parse("2019-08-19T18:38:33.1316420+03:00"), DateTime.Parse("2019-08-19T18:48:33.1316420+03:00"), "BBG000CL9VN6", BrokerAccountId);
 
             Assert.NotNull(handler.RequestMessage);
             Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}operations?from={HttpUtility.UrlEncode("2019-08-19T18:38:33.1316420+03:00")}&to={HttpUtility.UrlEncode("2019-08-19T18:48:33.1316420+03:00")}&figi=BBG000CL9VN6"), handler.RequestMessage.RequestUri);
+            Assert.Equal(new Uri($"{BaseUri}operations?from={HttpUtility.UrlEncode("2019-08-19T18:38:33.1316420+03:00")}&to={HttpUtility.UrlEncode("2019-08-19T18:48:33.1316420+03:00")}&figi=BBG000CL9VN6&brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
             Assert.Null(handler.RequestMessage.Content);
 
             Assert.NotNull(operations);
@@ -647,6 +697,12 @@ namespace Tinkoff.Trading.OpenApi.Tests
                 }
             }
         }
-
+        
+        private static (HttpMessageHandlerStub handler, SandboxContext context) CreateStubs(string jsonResponse)
+        {
+            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, jsonResponse);
+            var connection = new SandboxConnection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
+            return (handler, connection.Context);
+        }
     }
 }

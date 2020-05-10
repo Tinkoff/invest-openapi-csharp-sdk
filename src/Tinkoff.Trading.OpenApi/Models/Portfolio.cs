@@ -15,6 +15,7 @@ namespace Tinkoff.Trading.OpenApi.Models
 
         public class Position
         {
+            public string Name { get; }
             public string Figi { get; }
             public string Ticker { get; }
             public string Isin { get; }
@@ -28,6 +29,7 @@ namespace Tinkoff.Trading.OpenApi.Models
 
             [JsonConstructor]
             public Position(
+                string name,
                 string figi,
                 string ticker,
                 string isin,
@@ -39,6 +41,7 @@ namespace Tinkoff.Trading.OpenApi.Models
                 MoneyAmount averagePositionPrice,
                 MoneyAmount averagePositionPriceNoNkd)
             {
+                Name = name;
                 Figi = figi;
                 Ticker = ticker;
                 Isin = isin;
