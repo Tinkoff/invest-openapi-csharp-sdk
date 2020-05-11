@@ -1,36 +1,43 @@
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Web;
 using FluentAssertions;
-using FluentAssertions.Json;
+using RichardSzalay.MockHttp;
 using Tinkoff.Trading.OpenApi.Models;
 using Tinkoff.Trading.OpenApi.Network;
-using Tinkoff.Trading.OpenApi.Tests.Json;
+using Tinkoff.Trading.OpenApi.Tests.TestHelpers;
 using Xunit;
 
 namespace Tinkoff.Trading.OpenApi.Tests
 {
     public class ContextTests
     {
+        public ContextTests()
+        {
+            _handler = new MockHttpMessageHandler();
+            _handler.Fallback.Throw();
+            _context = new SandboxConnection(BaseUri, WebSocketBaseUri, Token, _handler.ToHttpClient()).Context;
+        }
+
         private const string BaseUri = "https://api-invest.tinkoff.ru/openapi/";
         private const string WebSocketBaseUri = "wss://api-invest.tinkoff.ru/openapi/md/v1/md-openapi/ws";
         private const string Token = "";
         private const string BrokerAccountId = "SB000000";
+        private const string Figi = "BBG000CL9VN6";
+
+        private readonly MockHttpMessageHandler _handler;
+        private readonly SandboxContext _context;
 
         [Fact]
         public async Task AccountsTest()
         {
-            var (handler, context) = CreateStubs(JsonFile.Read("accounts-response"));
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}user/accounts")
+                .WithoutContent()
+                .RespondJsonFromFile("accounts-response");
 
-            var response = await context.AccountsAsync();
+            var response = await _context.AccountsAsync();
 
-            handler.RequestMessage.Method.Should().Be(HttpMethod.Get);
-            handler.RequestMessage.RequestUri.Should().Be(new Uri($"{BaseUri}user/accounts"));
-            handler.RequestMessage.Should().NotBeNull();
-            handler.RequestMessage.Content.Should().BeNull();
             var expectedResponse = new object[]
             {
                 new Account(BrokerAccountType.Tinkoff, "SB000000"),
@@ -38,474 +45,123 @@ namespace Tinkoff.Trading.OpenApi.Tests
             };
             response.Should().BeEquivalentTo(expectedResponse);
         }
-        
-        [Fact]
-        public async Task OrdersTest()
-        {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":[{\"orderId\":\"12345687\",\"figi\":\"BBG000CL9VN6\",\"operation\":\"Buy\",\"status\":\"New\",\"requestedLots\":10,\"executedLots\":0,\"type\":\"Limit\",\"price\":288.7}]}");
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var orders = await context.OrdersAsync(BrokerAccountId);
-
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}orders?brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
-
-            var expected = new List<Order>
-            {
-                new Order(
-                    "12345687",
-                    "BBG000CL9VN6",
-                    OperationType.Buy,
-                    OrderStatus.New,
-                    10,
-                    0,
-                    OrderType.Limit,
-                    288.7m)
-            };
-            Assert.Equal(expected.Count, orders.Count);
-
-            for (var i = 0; i < orders.Count; ++i)
-            {
-                var expectedOrder = expected[i];
-                var actualOrder = orders[i];
-                Assert.Equal(expectedOrder.OrderId, actualOrder.OrderId);
-                Assert.Equal(expectedOrder.Figi, actualOrder.Figi);
-                Assert.Equal(expectedOrder.Operation, actualOrder.Operation);
-                Assert.Equal(expectedOrder.Status, actualOrder.Status);
-                Assert.Equal(expectedOrder.RequestedLots, actualOrder.RequestedLots);
-                Assert.Equal(expectedOrder.ExecutedLots, actualOrder.ExecutedLots);
-                Assert.Equal(expectedOrder.Type, actualOrder.Type);
-                Assert.Equal(expectedOrder.Price, actualOrder.Price);
-            }
-        }
-
-        [Fact]
-        public async Task PlaceLimitOrderTest()
-        {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"orderId\":\"12345687\",\"operation\":\"Sell\",\"status\":\"New\",\"rejectReason\":\"That's Why\",\"requestedLots\":10,\"executedLots\":0,\"commission\":{\"currency\":\"USD\",\"value\":1.44}}}");
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var placedLimitOrder = await context.PlaceLimitOrderAsync(new LimitOrder("BBG000CL9VN6", 10, OperationType.Sell, 288.3m, BrokerAccountId));
-
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Post, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}orders/limit-order?figi=BBG000CL9VN6&brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
-            Assert.NotNull(handler.RequestMessage.Content);
-
-            var content = await handler.RequestMessage.Content.ReadAsStringAsync();
-            Assert.Equal("{\"lots\":10,\"operation\":\"Sell\",\"price\":288.3}", content);
-
-            Assert.NotNull(placedLimitOrder);
-
-            var expected = new PlacedLimitOrder(
-                "12345687",
-                OperationType.Sell,
-                OrderStatus.New,
-                "That's Why",
-                10,
-                0,
-                new MoneyAmount(Currency.Usd, 1.44m));
-            Assert.Equal(expected.OrderId, placedLimitOrder.OrderId);
-            Assert.Equal(expected.Operation, placedLimitOrder.Operation);
-            Assert.Equal(expected.Status, placedLimitOrder.Status);
-            Assert.Equal(expected.RejectReason, placedLimitOrder.RejectReason);
-            Assert.Equal(expected.RequestedLots, placedLimitOrder.RequestedLots);
-            Assert.Equal(expected.ExecutedLots, placedLimitOrder.ExecutedLots);
-            Assert.Equal(expected.Commission.Value, placedLimitOrder.Commission.Value);
-            Assert.Equal(expected.Commission.Currency, placedLimitOrder.Commission.Currency);
-        }
-
-        [Fact]
-        public async Task PlaceMarketOrderTest()
-        {
-            var (handler, context) = CreateStubs(JsonFile.Read("market-order-response"));
-            var response = await context.PlaceMarketOrderAsync(new MarketOrder("BBG000CL9VN6", 10, OperationType.Buy, BrokerAccountId));
-
-            handler.RequestMessage.Method.Should().Be(HttpMethod.Post);
-            handler.RequestMessage.RequestUri.Should()
-                .Be(new Uri($"{BaseUri}orders/market-order?figi=BBG000CL9VN6&brokerAccountId={BrokerAccountId}"));
-            Assert.NotNull(handler.RequestMessage.Content);
-            
-            var request = await handler.RequestMessage.Content.ReadAsStringAsync();
-            request.Should().BeValidJson().Which.Should().BeEquivalentTo(JsonFile.Read("market-order-request"));
-
-            var expected = new PlacedMarketOrder(
-                "40fcdfa2-084b-41bc-8f9d-3414a5eb9e8c",
-                OperationType.Buy,
-                OrderStatus.Fill,
-                "That's Why",
-                10,
-                5,
-                new MoneyAmount(Currency.Usd, 1.44m));
-            response.Should().BeEquivalentTo(expected);
-        }
 
         [Fact]
         public async Task CancelOrderTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{}}");
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
             const string orderId = "12345687";
-            await context.CancelOrderAsync(orderId, BrokerAccountId);
+            _handler.Expect(HttpMethod.Post, $"{BaseUri}orders/cancel")
+                .WithQueryString(new Dictionary<string, string>
+                {
+                    ["orderId"] = orderId,
+                    ["brokerAccountId"] = BrokerAccountId
+                })
+                .WithoutContent()
+                .RespondJsonFromFile("ok");
 
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Post, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}orders/cancel?orderId={orderId}&brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
-        }
-
-        [Fact]
-        public async Task PortfolioTest()
-        {
-            const string response = "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"positions\":[{\"name\":\"name\",\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US0004026250\",\"instrumentType\":\"Stock\",\"balance\":10,\"blocked\":5,\"expectedYield\":{\"currency\":\"USD\",\"value\":10},\"lots\":10,\"averagePositionPrice\":{\"currency\":\"USD\",\"value\":295.4},\"averagePositionPriceNoNkd\":{\"currency\":\"USD\",\"value\":292.4}}]}}";
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, response);
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var portfolio = await context.PortfolioAsync(BrokerAccountId);
-
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}portfolio?brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
-
-            Assert.NotNull(portfolio);
-
-            var expected = new Portfolio(new List<Portfolio.Position>
-            {
-                new Portfolio.Position(
-                    "name",
-                    "BBG000CL9VN6",
-                    "NFLX",
-                    "US0004026250",
-                    InstrumentType.Stock,
-                    10,
-                    5,
-                    new MoneyAmount(Currency.Usd, 10),
-                    10,
-                    new MoneyAmount(Currency.Usd, 295.4m),
-                    new MoneyAmount(Currency.Usd, 292.4m))
-            });
-            Assert.Equal(expected.Positions.Count, portfolio.Positions.Count);
-
-            for (var i = 0; i < expected.Positions.Count; ++i)
-            {
-                var expectedPosition = expected.Positions[i];
-                var actualPosition = portfolio.Positions[i];
-                Assert.Equal(expectedPosition.Figi, actualPosition.Figi);
-                Assert.Equal(expectedPosition.Ticker, actualPosition.Ticker);
-                Assert.Equal(expectedPosition.Isin, actualPosition.Isin);
-                Assert.Equal(expectedPosition.InstrumentType, actualPosition.InstrumentType);
-                Assert.Equal(expectedPosition.Balance, actualPosition.Balance);
-                Assert.Equal(expectedPosition.Blocked, actualPosition.Blocked);
-                Assert.Equal(expectedPosition.ExpectedYield.Value, actualPosition.ExpectedYield.Value);
-                Assert.Equal(expectedPosition.ExpectedYield.Currency, actualPosition.ExpectedYield.Currency);
-                Assert.Equal(expectedPosition.Lots, actualPosition.Lots);
-                Assert.Equal(expectedPosition.AveragePositionPrice.Value, actualPosition.AveragePositionPrice.Value);
-                Assert.Equal(expectedPosition.AveragePositionPrice.Currency, actualPosition.AveragePositionPrice.Currency);
-                Assert.Equal(expectedPosition.AveragePositionPriceNoNkd.Value, actualPosition.AveragePositionPriceNoNkd.Value);
-                Assert.Equal(expectedPosition.AveragePositionPriceNoNkd.Currency, actualPosition.AveragePositionPriceNoNkd.Currency);
-            }
-        }
-
-        [Fact]
-        public async Task PortfolioCurrenciesTest()
-        {
-            const string response = "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"currencies\":[{\"currency\":\"EUR\",\"balance\":200.7,\"blocked\":100}, {\"currency\":\"JPY\",\"balance\":42.2,\"blocked\":0}]}}";
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, response);
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var portfolio = await context.PortfolioCurrenciesAsync(BrokerAccountId);
-
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}portfolio/currencies?brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
-
-            Assert.NotNull(portfolio);
-
-            var expected = new PortfolioCurrencies(new List<PortfolioCurrencies.PortfolioCurrency>
-            {
-                new PortfolioCurrencies.PortfolioCurrency(Currency.Eur, 200.7m, 100m),
-                new PortfolioCurrencies.PortfolioCurrency(Currency.Jpy, 42.2m, 0m)
-            });
-            Assert.Equal(expected.Currencies.Count, portfolio.Currencies.Count);
-
-            for (var i = 0; i < expected.Currencies.Count; ++i)
-            {
-                var expectedPosition = expected.Currencies[i];
-                var actualPosition = portfolio.Currencies[i];
-                Assert.Equal(expectedPosition.Currency, actualPosition.Currency);
-                Assert.Equal(expectedPosition.Balance, actualPosition.Balance);
-                Assert.Equal(expectedPosition.Blocked, actualPosition.Blocked);
-            }
-        }
-
-        [Fact]
-        public async Task MarketStocksTest()
-        {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000BR37X2\",\"ticker\":\"PGR\",\"isin\":\"US7433151039\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\",\"name\":\"Progressive\",\"type\":\"Stock\"}],\"total\":1}}");
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var stocks = await context.MarketStocksAsync();
-
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}market/stocks"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
-
-            Assert.NotNull(stocks);
-
-            var expected = new MarketInstrumentList(1, new List<MarketInstrument>
-            {
-                new MarketInstrument("BBG000BR37X2", "PGR", "US7433151039", 0.01m, 1, Currency.Usd, "Progressive", InstrumentType.Stock)
-            });
-            Assert.Equal(expected.Total, stocks.Total);
-            Assert.Equal(expected.Instruments.Count, stocks.Instruments.Count);
-
-            for (var i = 0; i < expected.Instruments.Count; ++i)
-            {
-                var expectedInstrument = expected.Instruments[i];
-                var actualInstrument = stocks.Instruments[i];
-                Assert.Equal(expectedInstrument.Figi, actualInstrument.Figi);
-                Assert.Equal(expectedInstrument.Ticker, actualInstrument.Ticker);
-                Assert.Equal(expectedInstrument.Isin, actualInstrument.Isin);
-                Assert.Equal(expectedInstrument.MinPriceIncrement, actualInstrument.MinPriceIncrement);
-                Assert.Equal(expectedInstrument.Lot, actualInstrument.Lot);
-                Assert.Equal(expectedInstrument.Currency, actualInstrument.Currency);
-            }
+            await _context.CancelOrderAsync(orderId, BrokerAccountId);
         }
 
         [Fact]
         public async Task MarketBondsTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG00FFH2SJ8\",\"ticker\":\"SU24019RMFS0\",\"isin\":\"RU000A0JX0J2\",\"minPriceIncrement\":0.001,\"lot\":1,\"currency\":\"RUB\",\"name\":\"ОФЗ 24019\",\"type\":\"Bond\"}],\"total\":1}}");
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var stocks = await context.MarketBondsAsync();
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}market/bonds")
+                .WithoutContent()
+                .RespondJsonFromFile("market-bonds-response");
 
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}market/bonds"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
-
-            Assert.NotNull(stocks);
+            var bonds = await _context.MarketBondsAsync();
 
             var expected = new MarketInstrumentList(1, new List<MarketInstrument>
             {
-                new MarketInstrument("BBG00FFH2SJ8", "SU24019RMFS0", "RU000A0JX0J2", 0.001m, 1, Currency.Rub, "ОФЗ 24019", InstrumentType.Bond)
+                new MarketInstrument("BBG00FFH2SJ8", "SU24019RMFS0", "RU000A0JX0J2", 0.001m, 1, Currency.Rub,
+                    "ОФЗ 24019", InstrumentType.Bond)
             });
-            Assert.Equal(expected.Total, stocks.Total);
-            Assert.Equal(expected.Instruments.Count, stocks.Instruments.Count);
 
-            for (var i = 0; i < expected.Instruments.Count; ++i)
-            {
-                var expectedInstrument = expected.Instruments[i];
-                var actualInstrument = stocks.Instruments[i];
-                Assert.Equal(expectedInstrument.Figi, actualInstrument.Figi);
-                Assert.Equal(expectedInstrument.Ticker, actualInstrument.Ticker);
-                Assert.Equal(expectedInstrument.Isin, actualInstrument.Isin);
-                Assert.Equal(expectedInstrument.MinPriceIncrement, actualInstrument.MinPriceIncrement);
-                Assert.Equal(expectedInstrument.Lot, actualInstrument.Lot);
-                Assert.Equal(expectedInstrument.Currency, actualInstrument.Currency);
-            }
-        }
-
-        [Fact]
-        public async Task MarketEtfsTest()
-        {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG005HM5979\",\"ticker\":\"FXJP\",\"isin\":\"IE00BD3QJ310\",\"minPriceIncrement\":1,\"lot\":1,\"currency\":\"RUB\",\"name\":\"Акции японских компаний\",\"type\":\"Etf\"}],\"total\":1}}");
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var stocks = await context.MarketEtfsAsync();
-
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}market/etfs"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
-
-            Assert.NotNull(stocks);
-
-            var expected = new MarketInstrumentList(1, new List<MarketInstrument>
-            {
-                new MarketInstrument("BBG005HM5979", "FXJP", "IE00BD3QJ310", 1, 1, Currency.Rub, "Акции японских компаний", InstrumentType.Etf)
-            });
-            Assert.Equal(expected.Total, stocks.Total);
-            Assert.Equal(expected.Instruments.Count, stocks.Instruments.Count);
-
-            for (var i = 0; i < expected.Instruments.Count; ++i)
-            {
-                var expectedInstrument = expected.Instruments[i];
-                var actualInstrument = stocks.Instruments[i];
-                Assert.Equal(expectedInstrument.Figi, actualInstrument.Figi);
-                Assert.Equal(expectedInstrument.Ticker, actualInstrument.Ticker);
-                Assert.Equal(expectedInstrument.Isin, actualInstrument.Isin);
-                Assert.Equal(expectedInstrument.MinPriceIncrement, actualInstrument.MinPriceIncrement);
-                Assert.Equal(expectedInstrument.Lot, actualInstrument.Lot);
-                Assert.Equal(expectedInstrument.Currency, actualInstrument.Currency);
-            }
-        }
-
-        [Fact]
-        public async Task MarketCurrenciesTest()
-        {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG0013HGFT4\",\"ticker\":\"USD000UTSTOM\",\"minPriceIncrement\":0.0025,\"lot\":1000,\"currency\":\"RUB\",\"name\":\"Доллар США\",\"type\":\"Currency\"},{\"figi\":\"BBG0013HJJ31\",\"ticker\":\"EUR_RUB__TOM\",\"minPriceIncrement\":0.0025,\"lot\":1000,\"currency\":\"RUB\",\"name\":\"Евро\",\"type\":\"Currency\"}],\"total\":2}}");
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var stocks = await context.MarketCurrenciesAsync();
-
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}market/currencies"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
-
-            Assert.NotNull(stocks);
-
-            var expected = new MarketInstrumentList(2, new List<MarketInstrument>
-            {
-                new MarketInstrument("BBG0013HGFT4", "USD000UTSTOM", null, 0.0025m, 1000, Currency.Rub, "Доллар США", InstrumentType.Currency),
-                new MarketInstrument("BBG0013HJJ31", "EUR_RUB__TOM", null, 0.0025m, 1000, Currency.Rub, "Евро", InstrumentType.Currency)
-            });
-            Assert.Equal(expected.Total, stocks.Total);
-            Assert.Equal(expected.Instruments.Count, stocks.Instruments.Count);
-
-            for (var i = 0; i < expected.Instruments.Count; ++i)
-            {
-                var expectedInstrument = expected.Instruments[i];
-                var actualInstrument = stocks.Instruments[i];
-                Assert.Equal(expectedInstrument.Figi, actualInstrument.Figi);
-                Assert.Equal(expectedInstrument.Ticker, actualInstrument.Ticker);
-                Assert.Equal(expectedInstrument.Isin, actualInstrument.Isin);
-                Assert.Equal(expectedInstrument.MinPriceIncrement, actualInstrument.MinPriceIncrement);
-                Assert.Equal(expectedInstrument.Lot, actualInstrument.Lot);
-                Assert.Equal(expectedInstrument.Currency, actualInstrument.Currency);
-            }
-        }
-
-        [Fact]
-        public async Task MarketSearchByFigiTest()
-        {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\",\"name\":\"Netflix\",\"type\":\"Stock\"}],\"total\":1}}");
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var instrumentList = await context.MarketSearchByFigiAsync("BBG000CL9VN6");
-
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}market/search/by-figi?figi=BBG000CL9VN6"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
-
-            Assert.NotNull(instrumentList);
-
-            var expected = new MarketInstrumentList(1, new List<MarketInstrument>
-            {
-                new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd, "Netflix", InstrumentType.Stock)
-            });
-            Assert.Equal(expected.Total, instrumentList.Total);
-            Assert.Equal(expected.Instruments.Count, instrumentList.Instruments.Count);
-
-            for (var i = 0; i < expected.Instruments.Count; ++i)
-            {
-                var expectedInstrument = expected.Instruments[i];
-                var actualInstrument = instrumentList.Instruments[i];
-                Assert.Equal(expectedInstrument.Figi, actualInstrument.Figi);
-                Assert.Equal(expectedInstrument.Ticker, actualInstrument.Ticker);
-                Assert.Equal(expectedInstrument.Isin, actualInstrument.Isin);
-                Assert.Equal(expectedInstrument.MinPriceIncrement, actualInstrument.MinPriceIncrement);
-                Assert.Equal(expectedInstrument.Lot, actualInstrument.Lot);
-                Assert.Equal(expectedInstrument.Currency, actualInstrument.Currency);
-            }
-        }
-
-        [Fact]
-        public async Task MarketSearchByTickerTest()
-        {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"instruments\":[{\"figi\":\"BBG000CL9VN6\",\"ticker\":\"NFLX\",\"isin\":\"US64110L1061\",\"minPriceIncrement\":0.01,\"lot\":1,\"currency\":\"USD\",\"name\":\"Netflix\",\"type\":\"Stock\"}],\"total\":1}}");
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var instrumentList = await context.MarketSearchByTickerAsync("NFLX");
-
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}market/search/by-ticker?ticker=NFLX"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
-
-            Assert.NotNull(instrumentList);
-
-            var expected = new MarketInstrumentList(1, new List<MarketInstrument>
-            {
-                new MarketInstrument("BBG000CL9VN6", "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd, "Netflix", InstrumentType.Stock)
-            });
-            Assert.Equal(expected.Total, instrumentList.Total);
-            Assert.Equal(expected.Instruments.Count, instrumentList.Instruments.Count);
-
-            for (var i = 0; i < expected.Instruments.Count; ++i)
-            {
-                var expectedInstrument = expected.Instruments[i];
-                var actualInstrument = instrumentList.Instruments[i];
-                Assert.Equal(expectedInstrument.Figi, actualInstrument.Figi);
-                Assert.Equal(expectedInstrument.Ticker, actualInstrument.Ticker);
-                Assert.Equal(expectedInstrument.Isin, actualInstrument.Isin);
-                Assert.Equal(expectedInstrument.MinPriceIncrement, actualInstrument.MinPriceIncrement);
-                Assert.Equal(expectedInstrument.Lot, actualInstrument.Lot);
-                Assert.Equal(expectedInstrument.Currency, actualInstrument.Currency);
-            }
+            bonds.Should().BeEquivalentTo(expected);
         }
 
         [Fact]
         public async Task MarketCandlesTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"payload\":{\"candles\":[{\"o\":299.5,\"c\":298.87,\"h\":299.59,\"l\":298.8,\"v\":18887,\"time\":\"2019-10-17T15:39Z\",\"interval\":\"1min\",\"figi\":\"BBG000CL9VN6\"}],\"interval\":\"1min\",\"figi\":\"BBG000CL9VN6\"},\"status\":\"Ok\"}");
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var candles = await context.MarketCandlesAsync("BBG000CL9VN6", DateTime.Parse("2019-10-17T18:38:33.1316420+03:00"), DateTime.Parse("2019-10-17T18:39:33.1316420+03:00"), CandleInterval.Minute);
+            const string figi = Figi;
+            const string from = "2019-10-17T18:38:33.1316420+03:00";
+            const string to = "2019-10-17T18:39:33.1316420+03:00";
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}market/candles")
+                .WithQueryString(new Dictionary<string, string>
+                {
+                    ["figi"] = figi,
+                    ["from"] = from,
+                    ["to"] = to,
+                    ["interval"] = "1min"
+                })
+                .WithoutContent()
+                .RespondJsonFromFile("market-candles-response");
 
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}market/candles?figi=BBG000CL9VN6&from={HttpUtility.UrlEncode("2019-10-17T18:38:33.1316420+03:00")}&to={HttpUtility.UrlEncode("2019-10-17T18:39:33.1316420+03:00")}&interval=1min"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
 
-            Assert.NotNull(candles);
+            var candles = await _context.MarketCandlesAsync(figi,
+                DateTime.Parse(from),
+                DateTime.Parse(to), CandleInterval.Minute);
 
-            var expected = new CandleList("BBG000CL9VN6", CandleInterval.Minute, new List<CandlePayload>
+            var expected = new CandleList(figi, CandleInterval.Minute, new List<CandlePayload>
             {
-                new CandlePayload(299.5m, 298.87m, 299.59m, 298.8m, 18887, DateTime.Parse("2019-10-17T15:39Z").ToUniversalTime(), CandleInterval.Minute, "BBG000CL9VN6")
+                new CandlePayload(299.5m, 298.87m, 299.59m, 298.8m, 18887,
+                    DateTime.Parse("2019-10-17T15:39Z").ToUniversalTime(), CandleInterval.Minute, figi)
             });
-            Assert.Equal(expected.Figi, candles.Figi);
-            Assert.Equal(expected.Interval, candles.Interval);
-            Assert.Equal(expected.Candles.Count, candles.Candles.Count);
 
-            for (var i = 0; i < expected.Candles.Count; ++i)
+            candles.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public async Task MarketCurrenciesTest()
+        {
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}market/currencies")
+                .WithoutContent()
+                .RespondJsonFromFile("market-currencies-response");
+
+            var currencies = await _context.MarketCurrenciesAsync();
+
+            var expected = new MarketInstrumentList(2, new List<MarketInstrument>
             {
-                var expectedCandle = expected.Candles[i];
-                var actualCandle = candles.Candles[i];
-                Assert.Equal(expectedCandle.Time, actualCandle.Time);
-                Assert.Equal(expectedCandle.Interval, actualCandle.Interval);
-                Assert.Equal(expectedCandle.Figi, actualCandle.Figi);
-                Assert.Equal(expectedCandle.Open, actualCandle.Open);
-                Assert.Equal(expectedCandle.Close, actualCandle.Close);
-                Assert.Equal(expectedCandle.High, actualCandle.High);
-                Assert.Equal(expectedCandle.Low, actualCandle.Low);
-                Assert.Equal(expectedCandle.Volume, actualCandle.Volume);
-            }
+                new MarketInstrument("BBG0013HGFT4", "USD000UTSTOM", null, 0.0025m, 1000, Currency.Rub, "Доллар США",
+                    InstrumentType.Currency),
+                new MarketInstrument("BBG0013HJJ31", "EUR_RUB__TOM", null, 0.0025m, 1000, Currency.Rub, "Евро",
+                    InstrumentType.Currency)
+            });
+
+            currencies.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public async Task MarketEtfsTest()
+        {
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}market/etfs")
+                .WithoutContent()
+                .RespondJsonFromFile("market-etfs-response");
+
+            var etfs = await _context.MarketEtfsAsync();
+
+            var expected = new MarketInstrumentList(1, new List<MarketInstrument>
+            {
+                new MarketInstrument("BBG005HM5979", "FXJP", "IE00BD3QJ310", 1, 1, Currency.Rub,
+                    "Акции японских компаний", InstrumentType.Etf)
+            });
+
+            etfs.Should().BeEquivalentTo(expected);
         }
 
         [Fact]
         public async Task MarketOrderbookTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"payload\":{\"figi\":\"BBG000CL9VN6\",\"depth\":5,\"tradeStatus\":\"NormalTrading\",\"minPriceIncrement\":0.01,\"faceValue\":293.55,\"lastPrice\":293.55,\"closePrice\":293.35,\"limitUp\":307.5,\"limitDown\":280.73,\"bids\":[{\"price\":293.44,\"quantity\":37},{\"price\":293.42,\"quantity\":9},{\"price\":293.4,\"quantity\":1},{\"price\":293.1,\"quantity\":35},{\"price\":293.09,\"quantity\":1}],\"asks\":[{\"price\":293.69,\"quantity\":1},{\"price\":293.72,\"quantity\":1},{\"price\":293.79,\"quantity\":35},{\"price\":293.8,\"quantity\":1},{\"price\":293.87,\"quantity\":20}]},\"status\":\"Ok\"}");
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var orderbook = await context.MarketOrderbookAsync("BBG000CL9VN6", 5);
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}market/orderbook")
+                .WithQueryString(new Dictionary<string, string>
+                {
+                    ["figi"] = Figi,
+                    ["depth"] = "5"
+                })
+                .WithoutContent()
+                .RespondJsonFromFile("market-orderbook-response");
 
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}market/orderbook?figi=BBG000CL9VN6&depth=5"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
-
-            Assert.NotNull(orderbook);
+            var orderbook = await _context.MarketOrderbookAsync(Figi, 5);
 
             var expected = new Orderbook(
                 5,
@@ -525,7 +181,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
                     new OrderbookRecord(1, 293.8m),
                     new OrderbookRecord(20, 293.87m)
                 },
-                "BBG000CL9VN6",
+                Figi,
                 TradeStatus.NormalTrading,
                 0.01m,
                 293.55m,
@@ -533,50 +189,84 @@ namespace Tinkoff.Trading.OpenApi.Tests
                 293.35m,
                 307.5m,
                 280.73m);
-            Assert.Equal(expected.Figi, orderbook.Figi);
-            Assert.Equal(expected.Depth, orderbook.Depth);
-            Assert.Equal(expected.TradeStatus, orderbook.TradeStatus);
-            Assert.Equal(expected.MinPriceIncrement, orderbook.MinPriceIncrement);
-            Assert.Equal(expected.LastPrice, orderbook.LastPrice);
-            Assert.Equal(expected.ClosePrice, orderbook.ClosePrice);
-            Assert.Equal(expected.LimitUp, orderbook.LimitUp);
-            Assert.Equal(expected.LimitDown, orderbook.LimitDown);
-            Assert.Equal(expected.Bids.Count, orderbook.Bids.Count);
 
-            for (var i = 0; i < expected.Bids.Count; ++i)
+            orderbook.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public async Task MarketSearchByFigiTest()
+        {
+            const string figi = Figi;
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}market/search/by-figi")
+                .WithQueryString("figi", figi)
+                .WithoutContent()
+                .RespondJsonFromFile("market-search-by-figi-response");
+
+            var instrumentList = await _context.MarketSearchByFigiAsync(figi);
+
+            var expected = new MarketInstrumentList(1, new List<MarketInstrument>
             {
-                var expectedBid = expected.Bids[i];
-                var actualBid = orderbook.Bids[i];
-                Assert.Equal(expectedBid.Price, actualBid.Price);
-                Assert.Equal(expectedBid.Quantity, actualBid.Quantity);
-            }
+                new MarketInstrument(figi, "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd, "Netflix",
+                    InstrumentType.Stock)
+            });
 
-            Assert.Equal(expected.Asks.Count, orderbook.Asks.Count);
+            instrumentList.Should().BeEquivalentTo(expected);
+        }
 
-            for (var i = 0; i < expected.Asks.Count; ++i)
+        [Fact]
+        public async Task MarketSearchByTickerTest()
+        {
+            const string ticker = "NFLX";
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}market/search/by-ticker")
+                .WithQueryString("ticker", ticker)
+                .WithoutContent()
+                .RespondJsonFromFile("market-search-by-ticker-response");
+
+            var instrumentList = await _context.MarketSearchByTickerAsync(ticker);
+
+            var expected = new MarketInstrumentList(1, new List<MarketInstrument>
             {
-                var expectedAsk = expected.Asks[i];
-                var actualAsk = orderbook.Asks[i];
-                Assert.Equal(expectedAsk.Price, actualAsk.Price);
-                Assert.Equal(expectedAsk.Quantity, actualAsk.Quantity);
-            }
+                new MarketInstrument(Figi, ticker, "US64110L1061", 0.01m, 1, Currency.Usd, "Netflix",
+                    InstrumentType.Stock)
+            });
+
+            instrumentList.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public async Task MarketStocksTest()
+        {
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}market/stocks")
+                .WithoutContent()
+                .RespondJsonFromFile("market-stocks-response");
+
+            var stocks = await _context.MarketStocksAsync();
+
+            var expected = new MarketInstrumentList(1, new List<MarketInstrument>
+            {
+                new MarketInstrument("BBG000BR37X2", "PGR", "US7433151039", 0.01m, 1, Currency.Usd, "Progressive",
+                    InstrumentType.Stock)
+            });
+
+            stocks.Should().BeEquivalentTo(expected);
         }
 
         [Fact]
         public async Task OperationsIntervalTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"operations\":[{\"id\":\"12345687\",\"status\":\"Done\",\"trades\":[{\"tradeId\":\"12345687\",\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"price\":100.3,\"quantity\":15}],\"commission\":{\"currency\":\"RUB\",\"value\":21},\"currency\":\"RUB\",\"payment\":1504.5,\"price\":100.3,\"quantity\":15,\"figi\":\"BBG000CL9VN6\",\"instrumentType\":\"Stock\",\"isMarginCall\":true,\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"operationType\":\"Buy\"}]}}");
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var operations = await context.OperationsAsync(DateTime.Parse("2019-08-19T18:38:33.1316420+03:00"), Interval.Day, "BBG000CL9VN6", BrokerAccountId);
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}operations")
+                .WithQueryString(new Dictionary<string, string>
+                {
+                    ["figi"] = Figi,
+                    ["from"] = "2019-08-19",
+                    ["interval"] = "1day",
+                    ["brokerAccountId"] = BrokerAccountId
+                })
+                .WithoutContent()
+                .RespondJsonFromFile("operations-interval-response");
 
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-             Assert.Equal(new Uri($"{BaseUri}operations?from={HttpUtility.UrlEncode("2019-08-19")}&interval=1day&figi=BBG000CL9VN6&brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
-
-            Assert.NotNull(operations);
-
+            var operations = await _context.OperationsAsync(DateTime.Parse("2019-08-19T18:38:33.1316420+03:00"),
+                Interval.Day, Figi, BrokerAccountId);
             var expected = new List<Operation>
             {
                 new Operation(
@@ -591,59 +281,31 @@ namespace Tinkoff.Trading.OpenApi.Tests
                     1504.5m,
                     100.3m,
                     15,
-                    "BBG000CL9VN6",
+                    Figi,
                     InstrumentType.Stock,
                     true,
                     DateTime.Parse("2019-08-19T18:38:33.131642+03:00"),
                     ExtendedOperationType.Buy)
             };
-            Assert.Equal(expected.Count, operations.Count);
+            operations.Should().BeEquivalentTo(expected);
+        }
 
-            for (var i = 0; i < expected.Count; ++i)
-            {
-                var expectedOperation = expected[i];
-                var actualOperation = operations[i];
-                Assert.Equal(expectedOperation.Id, actualOperation.Id);
-                Assert.Equal(expectedOperation.Status, actualOperation.Status);
-                Assert.Equal(expectedOperation.Commission.Value, actualOperation.Commission.Value);
-                Assert.Equal(expectedOperation.Commission.Currency, actualOperation.Commission.Currency);
-                Assert.Equal(expectedOperation.Currency, actualOperation.Currency);
-                Assert.Equal(expectedOperation.Payment, actualOperation.Payment);
-                Assert.Equal(expectedOperation.Price, actualOperation.Price);
-                Assert.Equal(expectedOperation.Quantity, actualOperation.Quantity);
-                Assert.Equal(expectedOperation.Figi, actualOperation.Figi);
-                Assert.Equal(expectedOperation.InstrumentType, actualOperation.InstrumentType);
-                Assert.Equal(expectedOperation.IsMarginCall, actualOperation.IsMarginCall);
-                Assert.Equal(expectedOperation.Date, actualOperation.Date);
-                Assert.Equal(expectedOperation.OperationType, actualOperation.OperationType);
-
-                Assert.Equal(expectedOperation.Trades.Count, actualOperation.Trades.Count);
-                for (var j = 0; j < expectedOperation.Trades.Count; ++j)
-                {
-                    var expectedTrade = expectedOperation.Trades[j];
-                    var actualTrade = actualOperation.Trades[j];
-                    Assert.Equal(expectedTrade.TradeId, actualTrade.TradeId);
-                    Assert.Equal(expectedTrade.Date, actualTrade.Date);
-                    Assert.Equal(expectedTrade.Price, actualTrade.Price);
-                    Assert.Equal(expectedTrade.Quantity, actualTrade.Quantity);
-                }
-            }
-        }      
-        
         [Fact]
         public async Task OperationsRangeTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, "{\"trackingId\":\"QBASTAN\",\"status\":\"OK\",\"payload\":{\"operations\":[{\"id\":\"12345687\",\"status\":\"Done\",\"trades\":[{\"tradeId\":\"12345687\",\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"price\":100.3,\"quantity\":15}],\"commission\":{\"currency\":\"RUB\",\"value\":21},\"currency\":\"RUB\",\"payment\":1504.5,\"price\":100.3,\"quantity\":15,\"figi\":\"BBG000CL9VN6\",\"instrumentType\":\"Stock\",\"isMarginCall\":true,\"date\":\"2019-08-19T18:38:33.131642+03:00\",\"operationType\":\"Buy\"}]}}");
-            var connection = new Connection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            var context = connection.Context;
-            var operations = await context.OperationsAsync(DateTime.Parse("2019-08-19T18:38:33.1316420+03:00"), DateTime.Parse("2019-08-19T18:48:33.1316420+03:00"), "BBG000CL9VN6", BrokerAccountId);
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}operations")
+                .WithQueryString(new Dictionary<string, string>
+                {
+                    ["figi"] = Figi,
+                    ["from"] = "2019-08-19T18:38:33.1316420+03:00",
+                    ["to"] = "2019-08-19T18:48:33.1316420+03:00",
+                    ["brokerAccountId"] = BrokerAccountId
+                })
+                .WithoutContent()
+                .RespondJsonFromFile("operations-range-response");
 
-            Assert.NotNull(handler.RequestMessage);
-            Assert.Equal(HttpMethod.Get, handler.RequestMessage.Method);
-            Assert.Equal(new Uri($"{BaseUri}operations?from={HttpUtility.UrlEncode("2019-08-19T18:38:33.1316420+03:00")}&to={HttpUtility.UrlEncode("2019-08-19T18:48:33.1316420+03:00")}&figi=BBG000CL9VN6&brokerAccountId={BrokerAccountId}"), handler.RequestMessage.RequestUri);
-            Assert.Null(handler.RequestMessage.Content);
-
-            Assert.NotNull(operations);
+            var operations = await _context.OperationsAsync(DateTime.Parse("2019-08-19T18:38:33.1316420+03:00"),
+                DateTime.Parse("2019-08-19T18:48:33.1316420+03:00"), Figi, BrokerAccountId);
 
             var expected = new List<Operation>
             {
@@ -659,50 +321,141 @@ namespace Tinkoff.Trading.OpenApi.Tests
                     1504.5m,
                     100.3m,
                     15,
-                    "BBG000CL9VN6",
+                    Figi,
                     InstrumentType.Stock,
                     true,
                     DateTime.Parse("2019-08-19T18:38:33.131642+03:00"),
                     ExtendedOperationType.Buy)
             };
-            Assert.Equal(expected.Count, operations.Count);
-
-            for (var i = 0; i < expected.Count; ++i)
-            {
-                var expectedOperation = expected[i];
-                var actualOperation = operations[i];
-                Assert.Equal(expectedOperation.Id, actualOperation.Id);
-                Assert.Equal(expectedOperation.Status, actualOperation.Status);
-                Assert.Equal(expectedOperation.Commission.Value, actualOperation.Commission.Value);
-                Assert.Equal(expectedOperation.Commission.Currency, actualOperation.Commission.Currency);
-                Assert.Equal(expectedOperation.Currency, actualOperation.Currency);
-                Assert.Equal(expectedOperation.Payment, actualOperation.Payment);
-                Assert.Equal(expectedOperation.Price, actualOperation.Price);
-                Assert.Equal(expectedOperation.Quantity, actualOperation.Quantity);
-                Assert.Equal(expectedOperation.Figi, actualOperation.Figi);
-                Assert.Equal(expectedOperation.InstrumentType, actualOperation.InstrumentType);
-                Assert.Equal(expectedOperation.IsMarginCall, actualOperation.IsMarginCall);
-                Assert.Equal(expectedOperation.Date, actualOperation.Date);
-                Assert.Equal(expectedOperation.OperationType, actualOperation.OperationType);
-
-                Assert.Equal(expectedOperation.Trades.Count, actualOperation.Trades.Count);
-                for (var j = 0; j < expectedOperation.Trades.Count; ++j)
-                {
-                    var expectedTrade = expectedOperation.Trades[j];
-                    var actualTrade = actualOperation.Trades[j];
-                    Assert.Equal(expectedTrade.TradeId, actualTrade.TradeId);
-                    Assert.Equal(expectedTrade.Date, actualTrade.Date);
-                    Assert.Equal(expectedTrade.Price, actualTrade.Price);
-                    Assert.Equal(expectedTrade.Quantity, actualTrade.Quantity);
-                }
-            }
+            operations.Should().BeEquivalentTo(expected);
         }
-        
-        private static (HttpMessageHandlerStub handler, SandboxContext context) CreateStubs(string jsonResponse)
+
+        [Fact]
+        public async Task OrdersTest()
         {
-            var handler = new HttpMessageHandlerStub(HttpStatusCode.OK, jsonResponse);
-            var connection = new SandboxConnection(BaseUri, WebSocketBaseUri, Token, new HttpClient(handler));
-            return (handler, connection.Context);
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}orders")
+                .WithQueryString("brokerAccountId", BrokerAccountId)
+                .WithoutContent()
+                .RespondJsonFromFile("orders-response");
+
+            var response = await _context.OrdersAsync(BrokerAccountId);
+
+            var expected = new List<Order>
+            {
+                new Order(
+                    "12345687",
+                    Figi,
+                    OperationType.Buy,
+                    OrderStatus.New,
+                    10,
+                    0,
+                    OrderType.Limit,
+                    288.7m)
+            };
+            response.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public async Task PlaceLimitOrderTest()
+        {
+            _handler.Expect(HttpMethod.Post, $"{BaseUri}orders/limit-order")
+                .WithQueryString(new Dictionary<string, string>
+                {
+                    ["figi"] = Figi,
+                    ["brokerAccountId"] = BrokerAccountId
+                })
+                .WithJsonContentFromFile("limit-order-request")
+                .RespondJsonFromFile("limit-order-response");
+
+            var placedLimitOrder = await _context.PlaceLimitOrderAsync(new LimitOrder(Figi, 10,
+                OperationType.Sell, 288.3m, BrokerAccountId));
+
+            var expected = new PlacedLimitOrder(
+                "12345687",
+                OperationType.Sell,
+                OrderStatus.New,
+                "That's Why",
+                10,
+                0,
+                new MoneyAmount(Currency.Usd, 1.44m));
+
+            placedLimitOrder.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public async Task PlaceMarketOrderTest()
+        {
+            _handler.Expect(HttpMethod.Post, $"{BaseUri}orders/market-order")
+                .WithQueryString(new Dictionary<string, string>
+                {
+                    ["figi"] = Figi,
+                    ["brokerAccountId"] = BrokerAccountId
+                })
+                .WithJsonContentFromFile("market-order-request")
+                .RespondJsonFromFile("market-order-response");
+
+            var response =
+                await _context.PlaceMarketOrderAsync(new MarketOrder(Figi, 10, OperationType.Buy,
+                    BrokerAccountId));
+
+            var expected = new PlacedMarketOrder(
+                "40fcdfa2-084b-41bc-8f9d-3414a5eb9e8c",
+                OperationType.Buy,
+                OrderStatus.Fill,
+                "That's Why",
+                10,
+                5,
+                new MoneyAmount(Currency.Usd, 1.44m));
+
+            response.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public async Task PortfolioCurrenciesTest()
+        {
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}portfolio/currencies")
+                .WithQueryString("brokerAccountId", BrokerAccountId)
+                .WithoutContent()
+                .RespondJsonFromFile("portfolio-currencies-response");
+
+            var currencies = await _context.PortfolioCurrenciesAsync(BrokerAccountId);
+
+            var expected = new PortfolioCurrencies(new List<PortfolioCurrencies.PortfolioCurrency>
+            {
+                new PortfolioCurrencies.PortfolioCurrency(Currency.Eur, 200.7m, 100m),
+                new PortfolioCurrencies.PortfolioCurrency(Currency.Jpy, 42.2m, 0m)
+            });
+
+            currencies.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public async Task PortfolioTest()
+        {
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}portfolio")
+                .WithQueryString("brokerAccountId", BrokerAccountId)
+                .WithoutContent()
+                .RespondJsonFromFile("portfolio-response");
+
+            var portfolio = await _context.PortfolioAsync(BrokerAccountId);
+
+            var expected = new Portfolio(new List<Portfolio.Position>
+            {
+                new Portfolio.Position(
+                    "name",
+                    Figi,
+                    "NFLX",
+                    "US0004026250",
+                    InstrumentType.Stock,
+                    10,
+                    5,
+                    new MoneyAmount(Currency.Usd, 10),
+                    10,
+                    new MoneyAmount(Currency.Usd, 295.4m),
+                    new MoneyAmount(Currency.Usd, 292.4m))
+            });
+
+            portfolio.Should().BeEquivalentTo(expected);
         }
     }
 }

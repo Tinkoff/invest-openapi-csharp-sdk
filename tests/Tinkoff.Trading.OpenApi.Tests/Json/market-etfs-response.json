@@ -1,0 +1,19 @@
+﻿{
+  "trackingId": "QBASTAN",
+  "status": "OK",
+  "payload": {
+    "instruments": [
+      {
+        "figi": "BBG005HM5979",
+        "ticker": "FXJP",
+        "isin": "IE00BD3QJ310",
+        "minPriceIncrement": 1,
+        "lot": 1,
+        "currency": "RUB",
+        "name": "Акции японских компаний",
+        "type": "Etf"
+      }
+    ],
+    "total": 1
+  }
+}

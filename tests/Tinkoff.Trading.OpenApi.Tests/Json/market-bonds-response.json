@@ -1,0 +1,19 @@
+﻿{
+  "trackingId": "QBASTAN",
+  "status": "OK",
+  "payload": {
+    "instruments": [
+      {
+        "figi": "BBG00FFH2SJ8",
+        "ticker": "SU24019RMFS0",
+        "isin": "RU000A0JX0J2",
+        "minPriceIncrement": 0.001,
+        "lot": 1,
+        "currency": "RUB",
+        "name": "ОФЗ 24019",
+        "type": "Bond"
+      }
+    ],
+    "total": 1
+  }
+}

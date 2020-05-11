@@ -1,0 +1,33 @@
+﻿{
+  "trackingId": "QBASTAN",
+  "status": "OK",
+  "payload": {
+    "operations": [
+      {
+        "id": "12345687",
+        "status": "Done",
+        "trades": [
+          {
+            "tradeId": "12345687",
+            "date": "2019-08-19T18:38:33.131642+03:00",
+            "price": 100.3,
+            "quantity": 15
+          }
+        ],
+        "commission": {
+          "currency": "RUB",
+          "value": 21
+        },
+        "currency": "RUB",
+        "payment": 1504.5,
+        "price": 100.3,
+        "quantity": 15,
+        "figi": "BBG000CL9VN6",
+        "instrumentType": "Stock",
+        "isMarginCall": true,
+        "date": "2019-08-19T18:38:33.131642+03:00",
+        "operationType": "Buy"
+      }
+    ]
+  }
+}

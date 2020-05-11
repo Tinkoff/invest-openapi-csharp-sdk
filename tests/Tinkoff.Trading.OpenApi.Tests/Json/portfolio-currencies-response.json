@@ -1,0 +1,18 @@
+﻿{
+  "trackingId": "QBASTAN",
+  "status": "OK",
+  "payload": {
+    "currencies": [
+      {
+        "currency": "EUR",
+        "balance": 200.7,
+        "blocked": 100
+      },
+      {
+        "currency": "JPY",
+        "balance": 42.2,
+        "blocked": 0
+      }
+    ]
+  }
+}

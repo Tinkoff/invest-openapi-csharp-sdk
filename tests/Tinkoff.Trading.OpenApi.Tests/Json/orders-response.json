@@ -1,0 +1,16 @@
+﻿{
+  "trackingId": "QBASTAN",
+  "status": "OK",
+  "payload": [
+    {
+      "orderId": "12345687",
+      "figi": "BBG000CL9VN6",
+      "operation": "Buy",
+      "status": "New",
+      "requestedLots": 10,
+      "executedLots": 0,
+      "type": "Limit",
+      "price": 288.7
+    }
+  ]
+}

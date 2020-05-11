@@ -1,7 +1,7 @@
 ﻿using System.IO;
-using System.Threading.Tasks;
+using System.Reflection;
 
-namespace Tinkoff.Trading.OpenApi.Tests.Json
+namespace Tinkoff.Trading.OpenApi.Tests.TestHelpers
 {
     public static class JsonFile
     {
@@ -13,8 +13,8 @@ namespace Tinkoff.Trading.OpenApi.Tests.Json
             {
                 fileName += JsonExtension;
             }
-            var directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            var path = Path.Combine(directory, nameof(Json), fileName);
+            var directory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            var path = Path.Combine(directory, "Json", fileName);
             return File.ReadAllText(path);
         }
     }
