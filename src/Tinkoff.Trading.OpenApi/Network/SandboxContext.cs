@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Tinkoff.Trading.OpenApi.Models;
 
 namespace Tinkoff.Trading.OpenApi.Network
@@ -11,24 +12,56 @@ namespace Tinkoff.Trading.OpenApi.Network
         {
         }
 
-        public async Task RegisterAsync()
+        public async Task<SandboxAccount> RegisterAsync(BrokerAccountType? brokerAccountType)
         {
-            await Connection.SendPostRequestAsync<object, EmptyPayload>(Endpoints.Register, null).ConfigureAwait(false);
+            var request = brokerAccountType.HasValue ? new SandboxRegisterRequest(brokerAccountType.Value) : null;
+            var response = await Connection
+                .SendPostRequestAsync<SandboxRegisterRequest, SandboxAccount>(Endpoints.Register, request)
+                .ConfigureAwait(false);
+            return response?.Payload;
         }
 
-        public async Task SetCurrencyBalanceAsync(Currency currency, decimal balance)
+        public async Task SetCurrencyBalanceAsync(Currency currency, decimal balance, string brokerAccountId = null)
         {
-            await Connection.SendPostRequestAsync<CurrencyBalance, EmptyPayload>(Endpoints.CurrenciesBalance, new CurrencyBalance(currency, balance)).ConfigureAwait(false);
+            var endpoint = AppendQueryParams(Endpoints.CurrenciesBalance, (BrokerAccountId, brokerAccountId));
+            await Connection
+                .SendPostRequestAsync<CurrencyBalance, EmptyPayload>(endpoint, new CurrencyBalance(currency, balance))
+                .ConfigureAwait(false);
         }
 
-        public async Task SetPositionBalanceAsync(string figi, decimal balance)
+        public async Task SetPositionBalanceAsync(string figi, decimal balance, string brokerAccountId = null)
         {
-            await Connection.SendPostRequestAsync<PositionBalance, EmptyPayload>(Endpoints.PositionsBalance, new PositionBalance(figi, balance)).ConfigureAwait(false);
+            var endpoint = AppendQueryParams(Endpoints.PositionsBalance, (BrokerAccountId, brokerAccountId));
+            await Connection
+                .SendPostRequestAsync<PositionBalance, EmptyPayload>(endpoint, new PositionBalance(figi, balance))
+                .ConfigureAwait(false);
         }
 
-        public async Task ClearAsync()
+        public async Task RemoveAsync(string brokerAccountId = null)
         {
-            await Connection.SendPostRequestAsync<object, EmptyPayload>(Endpoints.Clear, null).ConfigureAwait(false);
+            var endpoint = AppendQueryParams(Endpoints.Remove, (BrokerAccountId, brokerAccountId));
+            await Connection
+                .SendPostRequestAsync<object, EmptyPayload>(endpoint, null)
+                .ConfigureAwait(false);
+        }
+
+        public async Task ClearAsync(string brokerAccountId = null)
+        {
+            var endpoint = AppendQueryParams(Endpoints.Clear, (BrokerAccountId, brokerAccountId));
+            await Connection
+                .SendPostRequestAsync<object, EmptyPayload>(endpoint, null)
+                .ConfigureAwait(false);
+        }
+
+        [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
+        private class SandboxRegisterRequest
+        {
+            public SandboxRegisterRequest(BrokerAccountType brokerAccountType)
+            {
+                BrokerAccountType = brokerAccountType;
+            }
+
+            public BrokerAccountType BrokerAccountType { get; }
         }
 
         private class CurrencyBalance
@@ -66,6 +99,7 @@ namespace Tinkoff.Trading.OpenApi.Network
             public const string Register = "sandbox/register";
             public const string CurrenciesBalance = "sandbox/currencies/balance";
             public const string PositionsBalance = "sandbox/positions/balance";
+            public const string Remove = "sandbox/remove";
             public const string Clear = "sandbox/clear";
         }
     }

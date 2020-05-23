@@ -10,10 +10,23 @@ namespace Tinkoff.Trading.OpenApi.Models
         public List<OrderbookRecord> Asks { get; }
         public string Figi { get; }
         public TradeStatus TradeStatus { get; }
+        /// <summary>
+        /// Шаг цены
+        /// </summary>
         public decimal MinPriceIncrement { get; }
+        /// <summary>
+        /// Номинал для облигаций
+        /// </summary>
+        public decimal FaceValue { get; }
         public decimal LastPrice { get; }
         public decimal ClosePrice { get; }
+        /// <summary>
+        /// Верхняя граница цены
+        /// </summary>
         public decimal LimitUp { get; }
+        /// <summary>
+        /// Нижняя граница цены
+        /// </summary>
         public decimal LimitDown { get; }
 
         [JsonConstructor]
@@ -24,6 +37,7 @@ namespace Tinkoff.Trading.OpenApi.Models
             string figi,
             TradeStatus tradeStatus,
             decimal minPriceIncrement,
+            decimal faceValue,
             decimal lastPrice,
             decimal closePrice,
             decimal limitUp,
@@ -35,6 +49,7 @@ namespace Tinkoff.Trading.OpenApi.Models
             Figi = figi;
             TradeStatus = tradeStatus;
             MinPriceIncrement = minPriceIncrement;
+            FaceValue = faceValue;
             LastPrice = lastPrice;
             ClosePrice = closePrice;
             LimitUp = limitUp;

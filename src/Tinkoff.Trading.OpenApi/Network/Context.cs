@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using Newtonsoft.Json;
@@ -12,6 +13,8 @@ namespace Tinkoff.Trading.OpenApi.Network
 {
     public class Context : IContext, IDisposable
     {
+        protected const string BrokerAccountId = "brokerAccountId";
+        
         protected readonly IConnection<Context> Connection;
 
         public event EventHandler<StreamingEventReceivedEventArgs> StreamingEventReceived;
@@ -22,37 +25,62 @@ namespace Tinkoff.Trading.OpenApi.Network
             Connection.StreamingEventReceived += OnStreamingEventReceived;
         }
 
-        public async Task<List<Models.Order>> OrdersAsync()
+        public async Task<IReadOnlyCollection<Account>> AccountsAsync()
         {
-            var response = await Connection.SendGetRequestAsync<List<Models.Order>>(Endpoints.Orders).ConfigureAwait(false);
+            var response = await Connection.SendGetRequestAsync<AccountsList>(Endpoints.UserAccounts)
+                .ConfigureAwait(false);
+            return response?.Payload?.Accounts;
+        }
+
+        public async Task<List<Order>> OrdersAsync(string brokerAccountId = null)
+        {
+            var endpoint = AppendQueryParams(Endpoints.Orders, (BrokerAccountId, brokerAccountId));
+            var response = await Connection.SendGetRequestAsync<List<Order>>(endpoint)
+                .ConfigureAwait(false);
             return response?.Payload;
         }
 
         public async Task<PlacedLimitOrder> PlaceLimitOrderAsync(LimitOrder limitOrder)
         {
-            var figiParam = HttpUtility.UrlEncode(limitOrder.Figi);
-            var path = $"{Endpoints.OrdersLimitOrder}?figi={figiParam}";
-            var body = new Order(limitOrder.Lots, limitOrder.Operation, limitOrder.Price);
-            var response = await Connection.SendPostRequestAsync<Order, PlacedLimitOrder>(path, body).ConfigureAwait(false);
+            var endpoint = AppendQueryParams(Endpoints.OrdersLimitOrder, 
+                ("figi", limitOrder.Figi), (BrokerAccountId, limitOrder.BrokerAccountId));
+            var body = new LimitOrderBody(limitOrder.Lots, limitOrder.Operation, limitOrder.Price);
+            var response = await Connection.SendPostRequestAsync<LimitOrderBody, PlacedLimitOrder>(endpoint, body)
+                .ConfigureAwait(false);
             return response?.Payload;
         }
 
-        public async Task CancelOrderAsync(string id)
+        public async Task<PlacedMarketOrder> PlaceMarketOrderAsync(MarketOrder marketOrder)
         {
-            var idParam = HttpUtility.UrlEncode(id);
-            var path = $"{Endpoints.OrdersCancel}?orderId={idParam}";
-            await Connection.SendPostRequestAsync<object, EmptyPayload>(path, null).ConfigureAwait(false);
-        }
-
-        public async Task<Portfolio> PortfolioAsync()
-        {
-            var response = await Connection.SendGetRequestAsync<Portfolio>(Endpoints.Portfolio).ConfigureAwait(false);
+            var endpoint = AppendQueryParams(Endpoints.OrdersMarketOrder, 
+                ("figi", marketOrder.Figi), (BrokerAccountId, marketOrder.BrokerAccountId));
+            var body = new MarketOrderBody(marketOrder.Lots, marketOrder.Operation);
+            var response = await Connection.SendPostRequestAsync<MarketOrderBody, PlacedMarketOrder>(endpoint, body)
+                .ConfigureAwait(false);
             return response?.Payload;
         }
 
-        public async Task<PortfolioCurrencies> PortfolioCurrenciesAsync()
+        public async Task CancelOrderAsync(string id, string brokerAccountId = null)
+        {  
+            var endpoint = AppendQueryParams(Endpoints.OrdersCancel, 
+                ("orderId", id), (BrokerAccountId, brokerAccountId));
+            await Connection.SendPostRequestAsync<object, EmptyPayload>(endpoint, null)
+                .ConfigureAwait(false);
+        }
+
+        public async Task<Portfolio> PortfolioAsync(string brokerAccountId = null)
         {
-            var response = await Connection.SendGetRequestAsync<PortfolioCurrencies>(Endpoints.PortfolioCurrencies).ConfigureAwait(false);
+            var endpoint = AppendQueryParams(Endpoints.Portfolio, (BrokerAccountId, brokerAccountId));
+            var response = await Connection.SendGetRequestAsync<Portfolio>(endpoint)
+                .ConfigureAwait(false);
+            return response?.Payload;
+        }
+
+        public async Task<PortfolioCurrencies> PortfolioCurrenciesAsync(string brokerAccountId = null)
+        {
+            var endpoint = AppendQueryParams(Endpoints.PortfolioCurrencies, (BrokerAccountId, brokerAccountId));
+            var response = await Connection.SendGetRequestAsync<PortfolioCurrencies>(endpoint)
+                .ConfigureAwait(false);
             return response?.Payload;
         }
 
@@ -121,23 +149,23 @@ namespace Tinkoff.Trading.OpenApi.Network
             return response?.Payload;
         }
 
-        public async Task<List<Operation>> OperationsAsync(DateTime @from, DateTime to, string figi)
+        public async Task<List<Operation>> OperationsAsync(DateTime from, DateTime to, string figi,
+            string brokerAccountId = null)
         {
-            var fromParam = HttpUtility.UrlEncode(from.ToString("O"));
-            var toParam = HttpUtility.UrlEncode(to.ToString("O"));
-            var figiParam = HttpUtility.UrlEncode(figi);
-            var path = $"{Endpoints.Operations}?from={fromParam}&to={toParam}&figi={figiParam}";
-            var response = await Connection.SendGetRequestAsync<OperationList>(path).ConfigureAwait(false);
+            var path = AppendQueryParams(Endpoints.Operations, ("from", from.ToString("O")),
+                ("to", to.ToString("O")), ("figi", figi), (BrokerAccountId, brokerAccountId));
+            var response = await Connection.SendGetRequestAsync<OperationList>(path)
+                .ConfigureAwait(false);
             return response?.Payload?.Operations;
         }
 
-        public async Task<List<Operation>> OperationsAsync(DateTime from, Interval interval, string figi)
+        public async Task<List<Operation>> OperationsAsync(DateTime from, Interval interval, string figi,
+            string brokerAccountId = null)
         {
-            var fromParam = HttpUtility.UrlEncode(from.ToString("yyyy-MM-dd"));
-            var intervalParam = interval.ToParamString();
-            var figiParam = HttpUtility.UrlEncode(figi);
-            var path = $"{Endpoints.Operations}?from={fromParam}&interval={intervalParam}&figi={figiParam}";
-            var response = await Connection.SendGetRequestAsync<OperationList>(path).ConfigureAwait(false);
+            var path = AppendQueryParams(Endpoints.Operations, ("from", from.ToString("yyyy-MM-dd")),
+                ("interval", interval.ToParamString()), ("figi", figi), (BrokerAccountId, brokerAccountId));
+            var response = await Connection.SendGetRequestAsync<OperationList>(path)
+                .ConfigureAwait(false);
             return response?.Payload?.Operations;
         }
 
@@ -162,8 +190,40 @@ namespace Tinkoff.Trading.OpenApi.Network
         protected class EmptyPayload
         {
         }
+        
+        protected static string AppendQueryParams(string endpoint, params (string name, string value)[] queryParams)
+        {
+            StringBuilder sb = null;
+            foreach (var (name, value) in queryParams)
+            {
+                if (string.IsNullOrWhiteSpace(value)) continue;
+                if (sb == null)
+                {
+                    sb = new StringBuilder(endpoint);
+                    sb.Append('?');
+                }
+                else
+                {
+                    sb.Append('&');
+                }
 
-        private class Order
+                sb.Append(name).Append('=').Append(HttpUtility.UrlEncode(value));
+            }
+
+            return sb?.ToString() ?? endpoint;
+        }
+        
+        private class AccountsList
+        {
+            public AccountsList(Account[] accounts)
+            {
+                Accounts = accounts;
+            }
+
+            public Account[] Accounts { get; }
+        }
+
+        private class LimitOrderBody
         {
             [JsonProperty(PropertyName = "lots")]
             public int Lots { get; }
@@ -174,11 +234,26 @@ namespace Tinkoff.Trading.OpenApi.Network
             [JsonProperty(PropertyName = "price")]
             public decimal Price { get; }
 
-            public Order(int lots, OperationType operation, decimal price)
+            public LimitOrderBody(int lots, OperationType operation, decimal price)
             {
                 Lots = lots;
                 Operation = operation;
                 Price = price;
+            }
+        }
+
+        private class MarketOrderBody
+        {
+            [JsonProperty(PropertyName = "lots")]
+            public int Lots { get; }
+
+            [JsonProperty(PropertyName = "operation")]
+            public OperationType Operation { get; }
+
+            public MarketOrderBody(int lots, OperationType operation)
+            {
+                Lots = lots;
+                Operation = operation;
             }
         }
 
@@ -197,6 +272,7 @@ namespace Tinkoff.Trading.OpenApi.Network
         {
             public const string Orders = "orders";
             public const string OrdersLimitOrder = "orders/limit-order";
+            public const string OrdersMarketOrder = "orders/market-order";
             public const string OrdersCancel = "orders/cancel";
             public const string Portfolio = "portfolio";
             public const string PortfolioCurrencies = "portfolio/currencies";
@@ -209,6 +285,7 @@ namespace Tinkoff.Trading.OpenApi.Network
             public const string MarketCandles = "market/candles";
             public const string MarketOrderbook = "market/orderbook";
             public const string Operations = "operations";
+            public const string UserAccounts = "user/accounts";
         }
     }
 }

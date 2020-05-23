@@ -1,0 +1,59 @@
+﻿{
+  "trackingId": "QBASTAN",
+  "payload": {
+    "figi": "BBG000CL9VN6",
+    "depth": 5,
+    "tradeStatus": "NormalTrading",
+    "minPriceIncrement": 0.01,
+    "faceValue": 293.55,
+    "lastPrice": 293.55,
+    "closePrice": 293.35,
+    "limitUp": 307.5,
+    "limitDown": 280.73,
+    "bids": [
+      {
+        "price": 293.44,
+        "quantity": 37
+      },
+      {
+        "price": 293.42,
+        "quantity": 9
+      },
+      {
+        "price": 293.4,
+        "quantity": 1
+      },
+      {
+        "price": 293.1,
+        "quantity": 35
+      },
+      {
+        "price": 293.09,
+        "quantity": 1
+      }
+    ],
+    "asks": [
+      {
+        "price": 293.69,
+        "quantity": 1
+      },
+      {
+        "price": 293.72,
+        "quantity": 1
+      },
+      {
+        "price": 293.79,
+        "quantity": 35
+      },
+      {
+        "price": 293.8,
+        "quantity": 1
+      },
+      {
+        "price": 293.87,
+        "quantity": 20
+      }
+    ]
+  },
+  "status": "Ok"
+}

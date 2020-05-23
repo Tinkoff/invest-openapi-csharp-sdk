@@ -7,10 +7,14 @@ namespace Tinkoff.Trading.OpenApi.Models
         public string Figi { get; }
         public string Ticker { get; }
         public string Isin { get; }
+        /// <summary>
+        /// Шаг цены
+        /// </summary>
         public decimal MinPriceIncrement { get; }
         public int Lot { get; }
         public Currency Currency { get; }
         public string Name { get; }
+        public InstrumentType Type { get; }
 
         [JsonConstructor]
         public MarketInstrument(
@@ -20,7 +24,8 @@ namespace Tinkoff.Trading.OpenApi.Models
             decimal minPriceIncrement,
             int lot,
             Currency currency,
-            string name)
+            string name,
+            InstrumentType type)
         {
             Figi = figi;
             Ticker = ticker;
@@ -29,6 +34,7 @@ namespace Tinkoff.Trading.OpenApi.Models
             Lot = lot;
             Currency = currency;
             Name = name;
+            Type = type;
         }
     }
 }

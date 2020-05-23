@@ -1,8 +1,8 @@
-using Newtonsoft.Json;
+﻿﻿using Newtonsoft.Json;
 
 namespace Tinkoff.Trading.OpenApi.Models
 {
-    public class PlacedLimitOrder
+    public class PlacedMarketOrder
     {
         public string OrderId { get; }
         public OperationType Operation { get; }
@@ -13,7 +13,7 @@ namespace Tinkoff.Trading.OpenApi.Models
         public MoneyAmount Commission { get; }
 
         [JsonConstructor]
-        public PlacedLimitOrder(string orderId, OperationType operation, OrderStatus status, string rejectReason, int requestedLots, int executedLots, MoneyAmount commission)
+        public PlacedMarketOrder(string orderId, OperationType operation, OrderStatus status, string rejectReason, int requestedLots, int executedLots, MoneyAmount commission)
         {
             OrderId = orderId;
             Operation = operation;

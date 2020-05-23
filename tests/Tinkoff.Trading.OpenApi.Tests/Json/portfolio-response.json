@@ -1,0 +1,30 @@
+﻿{
+  "trackingId": "QBASTAN",
+  "status": "OK",
+  "payload": {
+    "positions": [
+      {
+        "name": "name",
+        "figi": "BBG000CL9VN6",
+        "ticker": "NFLX",
+        "isin": "US0004026250",
+        "instrumentType": "Stock",
+        "balance": 10,
+        "blocked": 5,
+        "expectedYield": {
+          "currency": "USD",
+          "value": 10
+        },
+        "lots": 10,
+        "averagePositionPrice": {
+          "currency": "USD",
+          "value": 295.4
+        },
+        "averagePositionPriceNoNkd": {
+          "currency": "USD",
+          "value": 292.4
+        }
+      }
+    ]
+  }
+}
