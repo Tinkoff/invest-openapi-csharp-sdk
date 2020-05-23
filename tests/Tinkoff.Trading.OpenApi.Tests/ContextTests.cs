@@ -204,11 +204,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             var instrumentList = await _context.MarketSearchByFigiAsync(figi);
 
-            var expected = new MarketInstrumentList(1, new List<MarketInstrument>
-            {
-                new MarketInstrument(figi, "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd, "Netflix",
-                    InstrumentType.Stock)
-            });
+            var expected = new MarketInstrument(figi, "NFLX", "US64110L1061", 0.01m, 1, Currency.Usd, "Netflix", InstrumentType.Stock);
 
             instrumentList.Should().BeEquivalentTo(expected);
         }

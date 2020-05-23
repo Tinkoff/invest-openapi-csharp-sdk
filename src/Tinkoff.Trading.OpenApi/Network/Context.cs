@@ -108,11 +108,11 @@ namespace Tinkoff.Trading.OpenApi.Network
             return response?.Payload;
         }
 
-        public async Task<MarketInstrumentList> MarketSearchByFigiAsync(string figi)
+        public async Task<MarketInstrument> MarketSearchByFigiAsync(string figi)
         {
             var figiParam = HttpUtility.UrlEncode(figi);
             var path = $"{Endpoints.MarketSearchByFigi}?figi={figiParam}";
-            var response = await Connection.SendGetRequestAsync<MarketInstrumentList>(path).ConfigureAwait(false);
+            var response = await Connection.SendGetRequestAsync<MarketInstrument>(path).ConfigureAwait(false);
             return response?.Payload;
         }
 
