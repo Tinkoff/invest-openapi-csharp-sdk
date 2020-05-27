@@ -70,18 +70,31 @@ namespace Tinkoff.Trading.OpenApi.Network
 
         private static async Task<OpenApiResponse<TOut>> HandleResponseAsync<TOut>(HttpResponseMessage response)
         {
-            string content;
-            switch (response.StatusCode)
+            string content = string.Empty;
+            try
             {
-                case HttpStatusCode.OK:
-                    content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    return JsonConvert.DeserializeObject<OpenApiResponse<TOut>>(content);
-                case HttpStatusCode.Unauthorized:
-                    throw new OpenApiException("You have no access to that resource.", "Access Denied");
-                default:
-                    content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var openApiResponse = JsonConvert.DeserializeObject<OpenApiResponse<OpenApiExceptionPayload>>(content);
-                    throw new OpenApiException(openApiResponse.Payload.Message, openApiResponse.Payload.Code, openApiResponse.TrackingId);
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.OK:
+                        content = await response.Content.ReadAsStringAsync()
+                                      .ConfigureAwait(false);
+                        return JsonConvert.DeserializeObject<OpenApiResponse<TOut>>(content);
+                    case HttpStatusCode.Unauthorized:
+                        throw new OpenApiException("You have no access to that resource.", "Access Denied");
+                    default:
+                        content = await response.Content.ReadAsStringAsync()
+                                      .ConfigureAwait(false);
+                        var openApiResponse =
+                            JsonConvert.DeserializeObject<OpenApiResponse<OpenApiExceptionPayload>>(content);
+                        throw new OpenApiException(
+                            openApiResponse.Payload.Message,
+                            openApiResponse.Payload.Code,
+                            openApiResponse.TrackingId);
+                }
+            }
+            catch (Exception e) when(!(e is OpenApiException))
+            {
+                throw new OpenApiInvalidResponseException("Unable to handle response.", content, e);
             }
         }
 

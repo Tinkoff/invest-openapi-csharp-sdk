@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -456,6 +457,30 @@ namespace Tinkoff.Trading.OpenApi.Tests
             });
 
             portfolio.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public async Task InvalidResponseTest()
+        {
+            var invalidJson = "Invalid JSON";
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}portfolio/currencies")
+                .WithQueryString("brokerAccountId", BrokerAccountId)
+                .Respond("text/html", invalidJson);
+
+            var exception = await Assert.ThrowsAsync<OpenApiInvalidResponseException>(() => _context.PortfolioCurrenciesAsync(BrokerAccountId));
+
+            Assert.NotNull(exception.InnerException);
+            Assert.Equal($"Unable to handle response.\nResponse:\n{invalidJson}", exception.Message);
+        }
+
+        [Fact]
+        public async Task UnauthorizedResponseTest()
+        {
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}portfolio/currencies")
+                .WithQueryString("brokerAccountId", BrokerAccountId)
+                .Respond(HttpStatusCode.Unauthorized);
+
+            await Assert.ThrowsAsync<OpenApiException>(() => _context.PortfolioCurrenciesAsync(BrokerAccountId));
         }
     }
 }
