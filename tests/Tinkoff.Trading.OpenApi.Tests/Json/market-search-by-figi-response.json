@@ -2,18 +2,13 @@
   "trackingId": "QBASTAN",
   "status": "OK",
   "payload": {
-    "instruments": [
-      {
-        "figi": "BBG000CL9VN6",
-        "ticker": "NFLX",
-        "isin": "US64110L1061",
-        "minPriceIncrement": 0.01,
-        "lot": 1,
-        "currency": "USD",
-        "name": "Netflix",
-        "type": "Stock"
-      }
-    ],
-    "total": 1
+    "figi": "BBG000CL9VN6",
+    "ticker": "NFLX",
+    "isin": "US64110L1061",
+    "minPriceIncrement": 0.01,
+    "lot": 1,
+    "currency": "USD",
+    "name": "Netflix",
+    "type": "Stock"
   }
 }

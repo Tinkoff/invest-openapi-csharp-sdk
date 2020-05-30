@@ -92,7 +92,7 @@ namespace Tinkoff.Trading.OpenApi.Network
         /// </summary>
         /// <param name="figi">FIGI.</param>
         /// <returns></returns>
-        Task<MarketInstrumentList> MarketSearchByFigiAsync(string figi);
+        Task<MarketInstrument> MarketSearchByFigiAsync(string figi);
 
         /// <summary>
         /// Поиск инструмента по тикеру.
