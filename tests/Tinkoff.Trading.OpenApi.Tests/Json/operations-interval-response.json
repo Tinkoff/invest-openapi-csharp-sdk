@@ -9,7 +9,7 @@
         "trades": [
           {
             "tradeId": "12345687",
-            "date": "2019-08-19T18:38:33.131642+03:00",
+            "date": "2019-08-19T18:38:33.131642Z",
             "price": 100.3,
             "quantity": 15
           }
@@ -25,7 +25,7 @@
         "figi": "BBG000CL9VN6",
         "instrumentType": "Stock",
         "isMarginCall": true,
-        "date": "2019-08-19T18:38:33.131642+03:00",
+        "date": "2019-08-19T18:38:33.131642Z",
         "operationType": "Buy"
       }
     ]

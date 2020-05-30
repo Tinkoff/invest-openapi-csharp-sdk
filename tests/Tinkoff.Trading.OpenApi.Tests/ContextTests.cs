@@ -84,8 +84,8 @@ namespace Tinkoff.Trading.OpenApi.Tests
         public async Task MarketCandlesTest()
         {
             const string figi = Figi;
-            const string from = "2019-10-17T18:38:33.1316420+03:00";
-            const string to = "2019-10-17T18:39:33.1316420+03:00";
+            const string from = "2019-10-17T18:38:33.1316420Z";
+            const string to = "2019-10-17T18:39:33.1316420Z";
             _handler.Expect(HttpMethod.Get, $"{BaseUri}market/candles")
                 .WithQueryString(new Dictionary<string, string>
                 {
@@ -99,8 +99,8 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
 
             var candles = await _context.MarketCandlesAsync(figi,
-                DateTime.Parse(from),
-                DateTime.Parse(to), CandleInterval.Minute);
+                DateTime.Parse(from).ToUniversalTime(),
+                DateTime.Parse(to).ToUniversalTime(), CandleInterval.Minute);
 
             var expected = new CandleList(figi, CandleInterval.Minute, new List<CandlePayload>
             {
@@ -265,7 +265,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
                 .WithoutContent()
                 .RespondJsonFromFile("operations-interval-response");
 
-            var operations = await _context.OperationsAsync(DateTime.Parse("2019-08-19T18:38:33.1316420+03:00"),
+            var operations = await _context.OperationsAsync(DateTime.Parse("2019-08-19T18:38:33.1316420Z"),
                 Interval.Day, Figi, BrokerAccountId);
             var expected = new List<Operation>
             {
@@ -274,7 +274,8 @@ namespace Tinkoff.Trading.OpenApi.Tests
                     OperationStatus.Done,
                     new List<Trade>
                     {
-                        new Trade("12345687", DateTime.Parse("2019-08-19T18:38:33.131642+03:00"), 100.3m, 15)
+                        new Trade("12345687", DateTime.Parse("2019-08-19T18:38:33.131642Z").ToUniversalTime(),
+                            100.3m, 15)
                     },
                     new MoneyAmount(Currency.Rub, 21),
                     Currency.Rub,
@@ -284,7 +285,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
                     Figi,
                     InstrumentType.Stock,
                     true,
-                    DateTime.Parse("2019-08-19T18:38:33.131642+03:00"),
+                    DateTime.Parse("2019-08-19T18:38:33.131642Z").ToUniversalTime(),
                     ExtendedOperationType.Buy)
             };
             operations.Should().BeEquivalentTo(expected);
@@ -297,15 +298,16 @@ namespace Tinkoff.Trading.OpenApi.Tests
                 .WithQueryString(new Dictionary<string, string>
                 {
                     ["figi"] = Figi,
-                    ["from"] = "2019-08-19T18:38:33.1316420+03:00",
-                    ["to"] = "2019-08-19T18:48:33.1316420+03:00",
+                    ["from"] = "2019-08-19T18:38:33.1316420Z",
+                    ["to"] = "2019-08-19T18:48:33.1316420Z",
                     ["brokerAccountId"] = BrokerAccountId
                 })
                 .WithoutContent()
                 .RespondJsonFromFile("operations-range-response");
 
-            var operations = await _context.OperationsAsync(DateTime.Parse("2019-08-19T18:38:33.1316420+03:00"),
-                DateTime.Parse("2019-08-19T18:48:33.1316420+03:00"), Figi, BrokerAccountId);
+            var operations = await _context.OperationsAsync(
+                DateTime.Parse("2019-08-19T18:38:33.1316420Z").ToUniversalTime(),
+                DateTime.Parse("2019-08-19T18:48:33.1316420Z").ToUniversalTime(), Figi, BrokerAccountId);
 
             var expected = new List<Operation>
             {
@@ -314,7 +316,8 @@ namespace Tinkoff.Trading.OpenApi.Tests
                     OperationStatus.Done,
                     new List<Trade>
                     {
-                        new Trade("12345687", DateTime.Parse("2019-08-19T18:38:33.131642+03:00"), 100.3m, 15)
+                        new Trade("12345687", DateTime.Parse("2019-08-19T18:38:33.131642Z").ToUniversalTime(), 100.3m,
+                            15)
                     },
                     new MoneyAmount(Currency.Rub, 21),
                     Currency.Rub,
@@ -324,7 +327,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
                     Figi,
                     InstrumentType.Stock,
                     true,
-                    DateTime.Parse("2019-08-19T18:38:33.131642+03:00"),
+                    DateTime.Parse("2019-08-19T18:38:33.131642Z").ToUniversalTime(),
                     ExtendedOperationType.Buy)
             };
             operations.Should().BeEquivalentTo(expected);
