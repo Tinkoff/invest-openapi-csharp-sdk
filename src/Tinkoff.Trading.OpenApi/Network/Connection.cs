@@ -65,7 +65,8 @@ namespace Tinkoff.Trading.OpenApi.Network
             var requestJson = JsonConvert.SerializeObject(request);
             var data = Encoding.UTF8.GetBytes(requestJson);
             var buffer = new ArraySegment<byte>(data);
-            await _webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
+            await _webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None)
+                .ConfigureAwait(false);
         }
 
         private static async Task<OpenApiResponse<TOut>> HandleResponseAsync<TOut>(HttpResponseMessage response)
@@ -73,7 +74,11 @@ namespace Tinkoff.Trading.OpenApi.Network
             string content = string.Empty;
             try
             {
-                content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                if (response.Content != null)
+                {
+                    content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                }
+
                 switch (response.StatusCode)
                 {
                     case HttpStatusCode.OK:
@@ -89,7 +94,11 @@ namespace Tinkoff.Trading.OpenApi.Network
                             openApiResponse.TrackingId);
                 }
             }
-            catch (Exception e) when(!(e is OpenApiException))
+            catch (OpenApiException)
+            {
+                throw;
+            }
+            catch (Exception e)
             {
                 throw new OpenApiInvalidResponseException("Unable to handle response.", content, e);
             }
@@ -115,7 +124,8 @@ namespace Tinkoff.Trading.OpenApi.Network
                     switch (result.MessageType)
                     {
                         case WebSocketMessageType.Close:
-                            await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Ok", CancellationToken.None);
+                            await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Ok",
+                                CancellationToken.None);
                             _webSocket.Dispose();
                             _webSocket = null;
                             return;
@@ -130,6 +140,7 @@ namespace Tinkoff.Trading.OpenApi.Network
                                 OnStreamingEvent(response);
                                 messageBuffer.Clear();
                             }
+
                             break;
                     }
                 }
