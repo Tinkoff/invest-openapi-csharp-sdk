@@ -1,3 +1,5 @@
+using System;
+
 using Newtonsoft.Json;
 
 namespace Tinkoff.Trading.OpenApi.Models
@@ -7,8 +9,8 @@ namespace Tinkoff.Trading.OpenApi.Models
         public override string Event => "instrument_info";
 
         [JsonConstructor]
-        public InstrumentInfoResponse(InstrumentInfoPayload payload)
-            : base(payload)
+        public InstrumentInfoResponse(InstrumentInfoPayload payload, DateTime time)
+            : base(payload, time)
         {
         }
     }
