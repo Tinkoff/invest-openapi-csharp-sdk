@@ -20,6 +20,7 @@ namespace Tinkoff.Trading.OpenApi.Network
         private readonly string _token;
         private readonly HttpClient _httpClient;
         private ClientWebSocket _webSocket;
+        private Task _webSocketTask;
 
         protected Connection(string baseUri, string webSocketBaseUri, string token, HttpClient httpClient)
         {
@@ -30,6 +31,7 @@ namespace Tinkoff.Trading.OpenApi.Network
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
+        public Defaults Defaults { get; } = new Defaults();
         public abstract TContext Context { get; }
 
         public event EventHandler<StreamingEventReceivedEventArgs> StreamingEventReceived;
@@ -113,7 +115,7 @@ namespace Tinkoff.Trading.OpenApi.Network
             _webSocket.Options.SetRequestHeader("Authorization", $"Bearer {_token}");
             await _webSocket.ConnectAsync(_webSocketBaseUri, CancellationToken.None).ConfigureAwait(false);
 
-            Task.Run(async () =>
+            _webSocketTask = Task.Run(async () =>
             {
                 var transferBuffer = new byte[8096];
                 var messageBuffer = new List<byte>();
