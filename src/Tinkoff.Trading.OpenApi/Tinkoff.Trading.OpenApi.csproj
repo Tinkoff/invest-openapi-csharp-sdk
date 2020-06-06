@@ -12,6 +12,8 @@
         <RepositoryType>git</RepositoryType>
         <PackageTags>Tinkoff invest trading</PackageTags>
         <Description>SDK for Tinkoff Invest</Description>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
