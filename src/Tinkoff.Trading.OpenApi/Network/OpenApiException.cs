@@ -1,23 +1,25 @@
 using System;
-using Newtonsoft.Json;
+using System.Net;
 
 namespace Tinkoff.Trading.OpenApi.Network
 {
     public class OpenApiException : Exception
     {
+        public HttpStatusCode HttpStatusCode { get; }
+
         public string TrackingId { get; }
 
-        [JsonConstructor]
-        public OpenApiException(string message, string code, string trackingId)
+        public OpenApiException(string message, string code, string trackingId, HttpStatusCode httpStatusCode)
             : base($"{code}: {message} ({trackingId}).")
         {
             TrackingId = trackingId;
+            HttpStatusCode = httpStatusCode;
         }
 
-        [JsonConstructor]
-        public OpenApiException(string message, string code)
-            : base($"{code}: {message}.")
+        public OpenApiException(string message, HttpStatusCode httpStatusCode)
+            : base($"{httpStatusCode}: {message}.")
         {
+            HttpStatusCode = httpStatusCode;
         }
     }
 }

@@ -481,5 +481,17 @@ namespace Tinkoff.Trading.OpenApi.Tests
 
             await Assert.ThrowsAsync<OpenApiException>(() => _context.PortfolioCurrenciesAsync(BrokerAccountId));
         }
+
+        [Fact]
+        public async Task TooManyRequestsResponseTest()
+        {
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}portfolio/currencies")
+                .WithQueryString("brokerAccountId", BrokerAccountId)
+                .Respond(HttpStatusCode.TooManyRequests);
+
+            var exception = await Assert.ThrowsAsync<OpenApiException>(() => _context.PortfolioCurrenciesAsync(BrokerAccountId));
+
+            Assert.Equal(HttpStatusCode.TooManyRequests, exception.HttpStatusCode);
+        }
     }
 }
