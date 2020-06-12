@@ -34,5 +34,10 @@ namespace Tinkoff.Trading.OpenApi.Models
             Interval = interval;
             Figi = figi;
         }
+
+        public override string ToString()
+        {
+            return $"{nameof(Figi)}: {Figi}, {nameof(Interval)}: {Interval}, {nameof(Time)}: {Time}, {nameof(Open)}: {Open}, {nameof(Close)}: {Close}, {nameof(High)}: {High}, {nameof(Low)}: {Low}, {nameof(Volume)}: {Volume}";
+        }
     }
 }

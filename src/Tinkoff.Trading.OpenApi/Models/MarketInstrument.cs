@@ -36,5 +36,10 @@ namespace Tinkoff.Trading.OpenApi.Models
             Name = name;
             Type = type;
         }
+
+        public override string ToString()
+        {
+            return $"{nameof(Figi)}: {Figi}, {nameof(Ticker)}: {Ticker}, {nameof(Isin)}: {Isin}, {nameof(MinPriceIncrement)}: {MinPriceIncrement}, {nameof(Lot)}: {Lot}, {nameof(Currency)}: {Currency}, {nameof(Name)}: {Name}, {nameof(Type)}: {Type}";
+        }
     }
 }
