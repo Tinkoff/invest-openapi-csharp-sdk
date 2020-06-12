@@ -81,19 +81,25 @@ namespace Tinkoff.Trading.OpenApi.Network
                     content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 }
 
+                // .NET Standard 2.0 doesn't have too many requests status code
+                // https://github.com/dotnet/runtime/issues/15650#issue-558031319
+                const HttpStatusCode TooManyRequestsStatusCode = (HttpStatusCode)429;
                 switch (response.StatusCode)
                 {
                     case HttpStatusCode.OK:
                         return JsonConvert.DeserializeObject<OpenApiResponse<TOut>>(content);
                     case HttpStatusCode.Unauthorized:
-                        throw new OpenApiException("You have no access to that resource.", "Access Denied");
+                        throw new OpenApiException("You have no access to that resource.", HttpStatusCode.Unauthorized);
+                    case TooManyRequestsStatusCode:
+                        throw new OpenApiException("Too many requests.", TooManyRequestsStatusCode);
                     default:
                         var openApiResponse =
                             JsonConvert.DeserializeObject<OpenApiResponse<OpenApiExceptionPayload>>(content);
                         throw new OpenApiException(
                             openApiResponse.Payload.Message,
                             openApiResponse.Payload.Code,
-                            openApiResponse.TrackingId);
+                            openApiResponse.TrackingId,
+                            response.StatusCode);
                 }
             }
             catch (OpenApiException)
