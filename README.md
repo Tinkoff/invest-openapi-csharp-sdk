@@ -1,6 +1,6 @@
 # OpenAPI .NET SDK
 
-![Build Status](https://github.com/TinkoffCreditSystems/invest-openapi-csharp-sdk/workflows/.NET%20Core/badge.svg)
+![Build](https://github.com/TinkoffCreditSystems/invest-openapi-csharp-sdk/workflows/Build/badge.svg)
 [![NuGet version (Tinkoff Trading OpenApi)](https://img.shields.io/nuget/v/Tinkoff.Trading.OpenApi.svg)](https://www.nuget.org/packages/Tinkoff.Trading.OpenApi/)
 [![NuGet version (Tinkoff Trading OpenApi)](https://img.shields.io/nuget/dt/Tinkoff.Trading.OpenApi.svg)](https://www.nuget.org/packages/Tinkoff.Trading.OpenApi/)
 
