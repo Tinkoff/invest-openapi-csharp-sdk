@@ -124,20 +124,16 @@ namespace Tinkoff.Trading.OpenApi.Network
             return response?.Payload;
         }
 
-        public async Task<CandleList> MarketCandlesAsync(string figi, DateTime from, DateTime to, CandleInterval interval)
+        public async Task<CandleList> MarketCandlesAsync(string figi, DateTime from, DateTime to,
+            CandleInterval interval)
         {
-            var figiParam = HttpUtility.UrlEncode(figi);
-            var fromParam = HttpUtility.UrlEncode(from.ToString("o"));
-            var toParam = HttpUtility.UrlEncode(to.ToString("O"));
-            var intervalString = typeof(CandleInterval)
-                                     .GetTypeInfo()
-                                     .DeclaredMembers
-                                     .SingleOrDefault(i => i.Name == interval.ToString())
-                                     ?.GetCustomAttribute<EnumMemberAttribute>(false)
-                                     ?.Value ?? string.Empty;
-            var intervalParam = HttpUtility.UrlEncode(intervalString);
-            var path = $"{Endpoints.MarketCandles}?figi={figiParam}&from={fromParam}&to={toParam}&interval={intervalParam}";
-            var response = await Connection.SendGetRequestAsync<CandleList>(path).ConfigureAwait(false);
+            var endpoint = AppendQueryParams(Endpoints.MarketCandles, 
+                ("figi", figi),
+                ("from", FormatDateTime(from)),
+                ("to", FormatDateTime(to)),
+                ("interval", interval.GetEnumMemberValue()));
+            var response = await Connection.SendGetRequestAsync<CandleList>(endpoint)
+                .ConfigureAwait(false);
             return response?.Payload;
         }
 
@@ -152,8 +148,8 @@ namespace Tinkoff.Trading.OpenApi.Network
         public async Task<List<Operation>> OperationsAsync(DateTime from, DateTime to, string figi,
             string brokerAccountId = null)
         {
-            var path = AppendQueryParams(Endpoints.Operations, ("from", from.ToString("O")),
-                ("to", to.ToString("O")), ("figi", figi), (BrokerAccountId, brokerAccountId));
+            var path = AppendQueryParams(Endpoints.Operations, ("from", FormatDateTime(from)),
+                ("to", FormatDateTime(to)), ("figi", figi), (BrokerAccountId, brokerAccountId));
             var response = await Connection.SendGetRequestAsync<OperationList>(path)
                 .ConfigureAwait(false);
             return response?.Payload?.Operations;
@@ -180,6 +176,16 @@ namespace Tinkoff.Trading.OpenApi.Network
         {
             var handler = StreamingEventReceived;
             handler?.Invoke(this, args);
+        }
+
+        private string FormatDateTime(DateTime dateTime)
+        {
+            if (dateTime.Kind == DateTimeKind.Unspecified)
+            {
+                dateTime = DateTime.SpecifyKind(dateTime, Connection.Defaults.DateTimeKind);
+            }
+
+            return dateTime.ToString("O");
         }
 
         public void Dispose()

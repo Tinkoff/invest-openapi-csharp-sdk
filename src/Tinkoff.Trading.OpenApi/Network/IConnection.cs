@@ -15,7 +15,12 @@ namespace Tinkoff.Trading.OpenApi.Network
         /// Контекст OpenAPI.
         /// </summary>
         TContext Context { get; }
-        
+
+        /// <summary>
+        /// Значения по умолчанию.
+        /// </summary>
+        Defaults Defaults { get; }
+
         /// <summary>
         /// Событие, возникающее при получении сообщения от WebSocket-клиента.
         /// </summary>

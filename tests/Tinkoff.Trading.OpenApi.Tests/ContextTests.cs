@@ -82,6 +82,26 @@ namespace Tinkoff.Trading.OpenApi.Tests
         }
 
         [Fact]
+        public async Task MarketCandlesDefaultDateTimeKind()
+        {
+            const string figi = Figi;
+            var from = DateTime.Now.AddDays(-1);
+            var to = DateTime.Now;
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}market/candles")
+                .WithQueryString(new Dictionary<string, string>
+                {
+                    ["figi"] = figi,
+                    ["from"] = from.ToString("O"),
+                    ["to"] = to.ToString("O"),
+                    ["interval"] = "1min"
+                })
+                .WithoutContent()
+                .RespondJsonFromFile("market-candles-response");
+
+            await _context.MarketCandlesAsync(figi, from.AsUnspecified(), to.AsUnspecified(), CandleInterval.Minute);
+        }
+
+        [Fact]
         public async Task MarketCandlesTest()
         {
             const string figi = Figi;
@@ -328,6 +348,26 @@ namespace Tinkoff.Trading.OpenApi.Tests
                     ExtendedOperationType.Buy)
             };
             operations.Should().BeEquivalentTo(expected);
+        }
+
+        
+        [Fact]
+        public async Task OperationsDefaultDateTimeKind()
+        {
+            var from = DateTime.Now.AddDays(-1);
+            var to = DateTime.Now;
+            _handler.Expect(HttpMethod.Get, $"{BaseUri}operations")
+                .WithQueryString(new Dictionary<string, string>
+                {
+                    ["figi"] = Figi,
+                    ["from"] = from.ToString("O"),
+                    ["to"] = to.ToString("O"),
+                    ["brokerAccountId"] = BrokerAccountId
+                })
+                .WithoutContent()
+                .RespondJsonFromFile("operations-range-response");
+
+            await _context.OperationsAsync(from.AsUnspecified(), to.AsUnspecified(), Figi, BrokerAccountId);
         }
 
         [Fact]
