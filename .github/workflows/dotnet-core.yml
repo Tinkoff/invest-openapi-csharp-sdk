@@ -18,9 +18,9 @@ jobs:
       with:
         dotnet-version: 2.2.207
     - name: Install dependencies
-      run: dotnet restore
+      run: dotnet restore src/Tinkoff.Trading.OpenApi/Tinkoff.Trading.OpenApi.csproj
     - name: Build
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build --configuration Release --no-restore src/Tinkoff.Trading.OpenApi/Tinkoff.Trading.OpenApi.csproj
     - name: Test
       run: dotnet test --no-restore --verbosity normal
     - name: Publish on version change
