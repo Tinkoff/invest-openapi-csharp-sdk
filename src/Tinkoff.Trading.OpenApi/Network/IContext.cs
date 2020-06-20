@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Tinkoff.Trading.OpenApi.Models;
 
@@ -14,6 +15,16 @@ namespace Tinkoff.Trading.OpenApi.Network
         /// Событие, возникающее при получении сообщения от WebSocket-клиента.
         /// </summary>
         event EventHandler<StreamingEventReceivedEventArgs> StreamingEventReceived;
+
+        /// <summary>
+        /// Событие, возникающее при ошибке WebSocket-клиента (например, при обрыве связи).
+        /// </summary>
+        event EventHandler<WebSocketException> WebSocketException;
+
+        /// <summary>
+        /// Событие, возникающее при закрытии WebSocket соединения.
+        /// </summary>
+        event EventHandler StreamingClosed;
 
         /// <summary>
         /// Получение брокерских счетов клиента.
