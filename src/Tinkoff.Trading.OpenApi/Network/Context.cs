@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.Serialization;
+using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
@@ -18,11 +16,15 @@ namespace Tinkoff.Trading.OpenApi.Network
         protected readonly IConnection<Context> Connection;
 
         public event EventHandler<StreamingEventReceivedEventArgs> StreamingEventReceived;
+        public event EventHandler<WebSocketException> WebSocketException;
+        public event EventHandler StreamingClosed;
 
         public Context(IConnection<Context> connection)
         {
             Connection = connection;
             Connection.StreamingEventReceived += OnStreamingEventReceived;
+            Connection.WebSocketException += OnWebSocketException;
+            Connection.StreamingClosed += OnStreamingClosed;
         }
 
         public async Task<IReadOnlyCollection<Account>> AccountsAsync()
@@ -174,8 +176,17 @@ namespace Tinkoff.Trading.OpenApi.Network
 
         private void OnStreamingEventReceived(object sender, StreamingEventReceivedEventArgs args)
         {
-            var handler = StreamingEventReceived;
-            handler?.Invoke(this, args);
+            StreamingEventReceived?.Invoke(this, args);
+        }
+
+        private void OnWebSocketException(object sender, WebSocketException args)
+        {
+            WebSocketException?.Invoke(this, args);
+        }
+
+        private void OnStreamingClosed(object sender, EventArgs args)
+        {
+            StreamingClosed?.Invoke(this, args);
         }
 
         private string FormatDateTime(DateTime dateTime)
@@ -191,6 +202,8 @@ namespace Tinkoff.Trading.OpenApi.Network
         public void Dispose()
         {
             Connection.StreamingEventReceived -= OnStreamingEventReceived;
+            Connection.WebSocketException -= OnWebSocketException;
+            Connection.StreamingClosed -= OnStreamingClosed;
         }
 
         protected class EmptyPayload

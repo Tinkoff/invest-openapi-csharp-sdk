@@ -35,6 +35,8 @@ namespace Tinkoff.Trading.OpenApi.Network
         public abstract TContext Context { get; }
 
         public event EventHandler<StreamingEventReceivedEventArgs> StreamingEventReceived;
+        public event EventHandler<WebSocketException> WebSocketException;
+        public event EventHandler StreamingClosed;
 
         public async Task<OpenApiResponse<TPayload>> SendGetRequestAsync<TPayload>(string path)
         {
@@ -125,32 +127,44 @@ namespace Tinkoff.Trading.OpenApi.Network
             {
                 var transferBuffer = new byte[8096];
                 var messageBuffer = new List<byte>();
-                while (_webSocket.State == WebSocketState.Open)
+                try
                 {
-                    var buffer = new ArraySegment<byte>(transferBuffer);
-                    var result = await _webSocket.ReceiveAsync(buffer, CancellationToken.None);
-                    switch (result.MessageType)
+                    while (_webSocket.State == WebSocketState.Open)
                     {
-                        case WebSocketMessageType.Close:
-                            await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Ok",
-                                CancellationToken.None);
-                            _webSocket.Dispose();
-                            _webSocket = null;
-                            return;
-                        case WebSocketMessageType.Text:
-                            var receivedBytes = new byte[result.Count];
-                            Array.ConstrainedCopy(buffer.Array, 0, receivedBytes, 0, result.Count);
-                            messageBuffer.AddRange(receivedBytes);
-                            if (result.EndOfMessage)
-                            {
-                                var data = Encoding.UTF8.GetString(messageBuffer.ToArray());
-                                var response = JsonConvert.DeserializeObject<StreamingResponse>(data);
-                                OnStreamingEvent(response);
-                                messageBuffer.Clear();
-                            }
+                        var buffer = new ArraySegment<byte>(transferBuffer);
+                        var result = await _webSocket.ReceiveAsync(buffer, CancellationToken.None);
 
-                            break;
+                        switch (result.MessageType)
+                        {
+                            case WebSocketMessageType.Close:
+                                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Ok",
+                                    CancellationToken.None);
+                                StreamingClosed?.Invoke(this, EventArgs.Empty);
+                                return;
+                            case WebSocketMessageType.Text:
+                                var receivedBytes = new byte[result.Count];
+                                Array.ConstrainedCopy(buffer.Array, 0, receivedBytes, 0, result.Count);
+                                messageBuffer.AddRange(receivedBytes);
+                                if (result.EndOfMessage)
+                                {
+                                    var data = Encoding.UTF8.GetString(messageBuffer.ToArray());
+                                    var response = JsonConvert.DeserializeObject<StreamingResponse>(data);
+                                    OnStreamingEvent(response);
+                                    messageBuffer.Clear();
+                                }
+
+                                break;
+                        }
                     }
+                }
+                catch (WebSocketException e)
+                {
+                    WebSocketException?.Invoke(this, e);
+                }
+                finally
+                {
+                    _webSocket?.Dispose();
+                    _webSocket = null;
                 }
             });
         }
