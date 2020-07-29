@@ -23,10 +23,6 @@ namespace Tinkoff.Trading.OpenApi.Models
         HalfHour,
         [EnumMember(Value = "hour")]
         Hour,
-        [EnumMember(Value = "2hour")]
-        TwoHours,
-        [EnumMember(Value = "4hour")]
-        FourHours,
         [EnumMember(Value = "day")]
         Day,
         [EnumMember(Value = "week")]
