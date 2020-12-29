@@ -1,14 +1,19 @@
 using System;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Tinkoff.Trading.OpenApi.Models
 {
     public class CandlePayload
     {
+        [JsonPropertyName("o")]
         public decimal Open { get; }
+        [JsonPropertyName("c")]
         public decimal Close { get; }
+        [JsonPropertyName("h")]
         public decimal High { get; }
+        [JsonPropertyName("l")]
         public decimal Low { get; }
+        [JsonPropertyName("v")]
         public decimal Volume { get; }
         public DateTime Time { get; }
         public CandleInterval Interval { get; }
@@ -16,11 +21,11 @@ namespace Tinkoff.Trading.OpenApi.Models
 
         [JsonConstructor]
         public CandlePayload(
-            [JsonProperty("o")] decimal open,
-            [JsonProperty("c")] decimal close,
-            [JsonProperty("h")] decimal high,
-            [JsonProperty("l")] decimal low,
-            [JsonProperty("v")] decimal volume,
+            decimal open,
+            decimal close,
+            decimal high,
+            decimal low,
+            decimal volume,
             DateTime time,
             CandleInterval interval,
             string figi)

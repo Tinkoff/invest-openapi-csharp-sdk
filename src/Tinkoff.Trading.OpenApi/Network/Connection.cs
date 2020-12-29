@@ -5,9 +5,9 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Tinkoff.Trading.OpenApi.Models;
 
 namespace Tinkoff.Trading.OpenApi.Network
@@ -52,7 +52,7 @@ namespace Tinkoff.Trading.OpenApi.Network
             var request = new HttpRequestMessage(HttpMethod.Post, uri);
             if (payload != null)
             {
-                var body = JsonConvert.SerializeObject(payload);
+                var body = JsonSerializer.Serialize(payload, SerializationOptions.Instance);
                 request.Content = new StringContent(body, Encoding.UTF8, "application/json");
             }
 
@@ -66,7 +66,7 @@ namespace Tinkoff.Trading.OpenApi.Network
         {
             await EnsureWebSocketConnectionAsync().ConfigureAwait(false);
 
-            var requestJson = JsonConvert.SerializeObject(request);
+            var requestJson = JsonSerializer.Serialize(request, SerializationOptions.Instance);
             var data = Encoding.UTF8.GetBytes(requestJson);
             var buffer = new ArraySegment<byte>(data);
             await _webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None)
@@ -89,14 +89,14 @@ namespace Tinkoff.Trading.OpenApi.Network
                 switch (response.StatusCode)
                 {
                     case HttpStatusCode.OK:
-                        return JsonConvert.DeserializeObject<OpenApiResponse<TOut>>(content);
+                        return JsonSerializer.Deserialize<OpenApiResponse<TOut>>(content, SerializationOptions.Instance);
                     case HttpStatusCode.Unauthorized:
                         throw new OpenApiException("You have no access to that resource.", HttpStatusCode.Unauthorized);
                     case TooManyRequestsStatusCode:
                         throw new OpenApiException("Too many requests.", TooManyRequestsStatusCode);
                     default:
                         var openApiResponse =
-                            JsonConvert.DeserializeObject<OpenApiResponse<OpenApiExceptionPayload>>(content);
+                            JsonSerializer.Deserialize<OpenApiResponse<OpenApiExceptionPayload>>(content, SerializationOptions.Instance);
                         throw new OpenApiException(
                             openApiResponse.Payload.Message,
                             openApiResponse.Payload.Code,
@@ -148,7 +148,7 @@ namespace Tinkoff.Trading.OpenApi.Network
                                 if (result.EndOfMessage)
                                 {
                                     var data = Encoding.UTF8.GetString(messageBuffer.ToArray());
-                                    var response = JsonConvert.DeserializeObject<StreamingResponse>(data);
+                                    var response = JsonSerializer.Deserialize<StreamingResponse>(data, SerializationOptions.Instance);
                                     OnStreamingEvent(response);
                                     messageBuffer.Clear();
                                 }

@@ -1,25 +1,36 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Tinkoff.Trading.OpenApi.Models
 {
     public class InstrumentInfoPayload
     {
+        [JsonPropertyName("trade_status")]
         public string TradeStatus { get; }
+
+        [JsonPropertyName("min_price_increment")]
         public decimal MinPriceIncrement { get; }
+
         public int Lot { get; }
+
+        [JsonPropertyName("accrued_interest")]
         public decimal AccruedInterest { get; }
+
+        [JsonPropertyName("limit_up")]
         public decimal LimitUp { get; }
+
+        [JsonPropertyName("limit_down")]
         public decimal LimitDown { get; }
+
         public string Figi { get; }
 
         [JsonConstructor]
         public InstrumentInfoPayload(
-            [JsonProperty("trade_status")] string tradeStatus,
-            [JsonProperty("min_price_increment")] decimal minPriceIncrement,
+            string tradeStatus,
+            decimal minPriceIncrement,
             int lot,
-            [JsonProperty("accrued_interest")] decimal accruedInterest,
-            [JsonProperty("limit_up")] decimal limitUp,
-            [JsonProperty("limit_down")] decimal limitDown,
+            decimal accruedInterest,
+            decimal limitUp,
+            decimal limitDown,
             string figi)
         {
             TradeStatus = tradeStatus;
