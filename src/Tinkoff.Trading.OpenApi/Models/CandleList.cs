@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Tinkoff.Trading.OpenApi.Models
 {
@@ -8,7 +8,7 @@ namespace Tinkoff.Trading.OpenApi.Models
         public string Figi { get; }
         public CandleInterval Interval { get; }
         public List<CandlePayload> Candles { get; }
-        
+
         [JsonConstructor]
         public CandleList(string figi, CandleInterval interval, List<CandlePayload> candles)
         {

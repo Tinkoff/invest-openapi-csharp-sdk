@@ -1,13 +1,13 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Tinkoff.Trading.OpenApi.Models
 {
     public abstract class StreamingRequest
     {
-        [JsonProperty(PropertyName = "event")]
+        [JsonPropertyName("event")]
         public abstract string Event { get; }
 
-        [JsonProperty(PropertyName = "request_id")]
+        [JsonPropertyName("request_id")]
         public string RequestId { get; }
 
         protected StreamingRequest(string requestId)
@@ -49,10 +49,10 @@ namespace Tinkoff.Trading.OpenApi.Models
         {
             public override string Event => "candle:subscribe";
 
-            [JsonProperty(PropertyName = "figi")]
+            [JsonPropertyName("figi")]
             public string Figi { get; }
 
-            [JsonProperty(PropertyName = "interval")]
+            [JsonPropertyName("interval")]
             public CandleInterval Interval { get; }
 
             public CandleSubscribeRequest(string figi, CandleInterval interval, string requestId = null)
@@ -67,10 +67,10 @@ namespace Tinkoff.Trading.OpenApi.Models
         {
             public override string Event => "candle:unsubscribe";
 
-            [JsonProperty(PropertyName = "figi")]
+            [JsonPropertyName("figi")]
             public string Figi { get; }
 
-            [JsonProperty(PropertyName = "interval")]
+            [JsonPropertyName("interval")]
             public CandleInterval Interval { get; }
 
             public CandleUnsubscribeRequest(string figi, CandleInterval interval, string requestId = null)
@@ -85,10 +85,10 @@ namespace Tinkoff.Trading.OpenApi.Models
         {
             public override string Event => "orderbook:subscribe";
 
-            [JsonProperty(PropertyName = "figi")]
+            [JsonPropertyName("figi")]
             public string Figi { get; }
 
-            [JsonProperty(PropertyName = "depth")]
+            [JsonPropertyName("depth")]
             public int Depth { get; }
 
             public OrderbookSubscribeRequest(string figi, int depth, string requestId = null)
@@ -103,10 +103,10 @@ namespace Tinkoff.Trading.OpenApi.Models
         {
             public override string Event => "orderbook:unsubscribe";
 
-            [JsonProperty(PropertyName = "figi")]
+            [JsonPropertyName("figi")]
             public string Figi { get; }
 
-            [JsonProperty(PropertyName = "depth")]
+            [JsonPropertyName("depth")]
             public int Depth { get; }
 
             public OrderbookUnsubscribeRequest(string figi, int depth, string requestId = null)
@@ -121,7 +121,7 @@ namespace Tinkoff.Trading.OpenApi.Models
         {
             public override string Event => "instrument_info:subscribe";
 
-            [JsonProperty(PropertyName = "figi")]
+            [JsonPropertyName("figi")]
             public string Figi { get; }
 
             public InstrumentInfoSubscribeRequest(string figi, string requestId = null)
@@ -135,7 +135,7 @@ namespace Tinkoff.Trading.OpenApi.Models
         {
             public override string Event => "instrument_info:unsubscribe";
 
-            [JsonProperty(PropertyName = "figi")]
+            [JsonPropertyName("figi")]
             public string Figi { get; }
 
             public InstrumentInfoUnsubscribeRequest(string figi, string requestId = null)

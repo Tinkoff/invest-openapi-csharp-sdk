@@ -1,16 +1,19 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Tinkoff.Trading.OpenApi.Models
 {
     public class StreamingErrorPayload
     {
+        [JsonPropertyName("error")]
         public string Error { get; }
+
+        [JsonPropertyName("request_id")]
         public string RequestId { get; }
 
         [JsonConstructor]
         public StreamingErrorPayload(
-            [JsonProperty("error")] string error,
-            [JsonProperty("request_id")] string requestId)
+            string error,
+            string requestId)
         {
             Error = error;
             RequestId = requestId;

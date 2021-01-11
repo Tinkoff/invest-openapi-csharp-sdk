@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json.Serialization;
-
-namespace Tinkoff.Trading.OpenApi.Models
+﻿namespace Tinkoff.Trading.OpenApi.Models
 {
     /// <summary>
     /// Данные счета песочницы

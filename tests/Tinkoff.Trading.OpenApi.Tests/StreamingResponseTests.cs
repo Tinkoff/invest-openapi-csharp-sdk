@@ -1,8 +1,6 @@
 ﻿using System;
-
+using System.Text.Json;
 using FluentAssertions;
-
-using Newtonsoft.Json;
 
 using Tinkoff.Trading.OpenApi.Models;
 using Tinkoff.Trading.OpenApi.Tests.TestHelpers;
@@ -16,7 +14,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public void DeserializeCandleTest()
         {
-            var streamingResponse = JsonConvert.DeserializeObject<StreamingResponse>(JsonFile.Read("streaming-candle-response"));
+            var streamingResponse = JsonSerializer.Deserialize<StreamingResponse>(JsonFile.Read("streaming-candle-response"), new JsonSerializerOptions(JsonSerializerDefaults.Web));
             var response = streamingResponse as StreamingResponse<CandlePayload>;
 
             var expectedResponse = new CandleResponse(
@@ -29,7 +27,7 @@ namespace Tinkoff.Trading.OpenApi.Tests
                     new DateTime(2019, 08, 07, 15, 35, 00, DateTimeKind.Utc),
                     CandleInterval.FiveMinutes,
                     "BBG0013HGFT4"),
-                new DateTime(2019, 08, 07, 15, 35, 01, 029, DateTimeKind.Utc).AddTicks(7213));
+                new DateTime(2019, 08, 07, 15, 35, 01, 029, DateTimeKind.Utc).AddTicks(7212));
 
             response.Should().BeEquivalentTo(expectedResponse);
         }

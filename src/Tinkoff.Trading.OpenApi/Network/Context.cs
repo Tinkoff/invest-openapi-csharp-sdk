@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Web;
-using Newtonsoft.Json;
 using Tinkoff.Trading.OpenApi.Models;
 
 namespace Tinkoff.Trading.OpenApi.Network
@@ -244,13 +244,13 @@ namespace Tinkoff.Trading.OpenApi.Network
 
         private class LimitOrderBody
         {
-            [JsonProperty(PropertyName = "lots")]
+            [JsonPropertyName("lots")]
             public int Lots { get; }
 
-            [JsonProperty(PropertyName = "operation")]
+            [JsonPropertyName("operation")]
             public OperationType Operation { get; }
 
-            [JsonProperty(PropertyName = "price")]
+            [JsonPropertyName("price")]
             public decimal Price { get; }
 
             public LimitOrderBody(int lots, OperationType operation, decimal price)
@@ -263,10 +263,10 @@ namespace Tinkoff.Trading.OpenApi.Network
 
         private class MarketOrderBody
         {
-            [JsonProperty(PropertyName = "lots")]
+            [JsonPropertyName("lots")]
             public int Lots { get; }
 
-            [JsonProperty(PropertyName = "operation")]
+            [JsonPropertyName("operation")]
             public OperationType Operation { get; }
 
             public MarketOrderBody(int lots, OperationType operation)

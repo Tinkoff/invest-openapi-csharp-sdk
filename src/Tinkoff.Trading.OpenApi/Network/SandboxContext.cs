@@ -1,6 +1,6 @@
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+
 using Tinkoff.Trading.OpenApi.Models;
 
 namespace Tinkoff.Trading.OpenApi.Network
@@ -53,7 +53,6 @@ namespace Tinkoff.Trading.OpenApi.Network
                 .ConfigureAwait(false);
         }
 
-        [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
         private class SandboxRegisterRequest
         {
             public SandboxRegisterRequest(BrokerAccountType brokerAccountType)
@@ -61,15 +60,16 @@ namespace Tinkoff.Trading.OpenApi.Network
                 BrokerAccountType = brokerAccountType;
             }
 
+            [JsonPropertyName("brokerAccountType")]
             public BrokerAccountType BrokerAccountType { get; }
         }
 
         private class CurrencyBalance
         {
-            [JsonProperty(PropertyName = "currency")]
+            [JsonPropertyName("currency")]
             public Currency Currency { get; }
 
-            [JsonProperty(PropertyName = "balance")]
+            [JsonPropertyName("balance")]
             public decimal Balance { get; }
 
             public CurrencyBalance(Currency currency, decimal balance)
@@ -81,10 +81,10 @@ namespace Tinkoff.Trading.OpenApi.Network
 
         private class PositionBalance
         {
-            [JsonProperty(PropertyName = "figi")]
+            [JsonPropertyName("figi")]
             public string Figi { get; }
 
-            [JsonProperty(PropertyName = "balance")]
+            [JsonPropertyName("balance")]
             public decimal Balance { get; }
 
             public PositionBalance(string figi, decimal balance)

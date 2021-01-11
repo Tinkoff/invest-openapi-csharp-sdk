@@ -36,7 +36,6 @@ docker run --rm  -v "$PWD":/home/dotnet/project -w  /home/dotnet/project mcr.mic
 
 ## Документация
 
-Единственная зависимость проекта — Json.NET для работы с JSON.
 Документацию непосредственно по OpenAPI можно найти по [ссылке](https://api-invest.tinkoff.ru/openapi/docs/).
 
 ### Быстрый старт
