@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.Json;
 using FluentAssertions;
 
@@ -30,6 +30,14 @@ namespace Tinkoff.Trading.OpenApi.Tests
                 new DateTime(2019, 08, 07, 15, 35, 01, 029, DateTimeKind.Utc).AddTicks(7212));
 
             response.Should().BeEquivalentTo(expectedResponse);
+        }
+
+        [Fact]
+        public void DeserializeCandleWithNewValueTest()
+        {
+            Action act = () => JsonSerializer.Deserialize<StreamingResponse>(JsonFile.Read("streaming-candle-response-with-new-field"), new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+            act.Should().NotThrow("The serialization shouldn't fail if there are new properties in the response");
         }
     }
 }

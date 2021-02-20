@@ -13,10 +13,16 @@ namespace Tinkoff.Trading.OpenApi.Models
         {
             string type = string.Empty;
             DateTime dateTime = default;
-            JsonDocument payload = null;
+            Utf8JsonReader payloadReader = reader;
+
+            var eventPropertyName = "event".AsSpan();
+            var timePropertyName = "time".AsSpan();
+            var payloadPropertyName = "payload".AsSpan();
+            var startDepth = reader.CurrentDepth;
+
             while (reader.Read())
             {
-                if (reader.TokenType == JsonTokenType.PropertyName && reader.GetString() == "event")
+                if (reader.TokenType == JsonTokenType.PropertyName && reader.ValueTextEquals(eventPropertyName))
                 {
                     reader.Read();
                     type = reader.GetString();
@@ -24,7 +30,7 @@ namespace Tinkoff.Trading.OpenApi.Models
                     continue;
                 }
 
-                if (reader.TokenType == JsonTokenType.PropertyName && reader.GetString() == "time")
+                if (reader.TokenType == JsonTokenType.PropertyName && reader.ValueTextEquals(timePropertyName))
                 {
                     reader.Read();
                     dateTime = reader.GetDateTime();
@@ -32,33 +38,36 @@ namespace Tinkoff.Trading.OpenApi.Models
                     continue;
                 }
 
-                if (reader.TokenType == JsonTokenType.PropertyName && reader.GetString() == "payload")
+                if (reader.TokenType == JsonTokenType.PropertyName && reader.ValueTextEquals(payloadPropertyName))
                 {
-                    reader.Read();
-                    payload = JsonDocument.ParseValue(ref reader);
+                    payloadReader = reader;
+                    reader.Skip();
+
                     continue;
                 }
 
-                if (!string.IsNullOrEmpty(type) && payload != null && dateTime != default)
+                if (!string.IsNullOrEmpty(type) && dateTime != default && payloadReader.TokenStartIndex != 0)
                 {
-                    var rawPayload = payload.RootElement.GetRawText();
+                    // When reading an object, JsonConverter<T>.Read() must leave the Utf8JsonReader
+                    // positioned on the EndObject token of the object where it was originally positioned.
+                    while ((reader.TokenType != JsonTokenType.EndObject || reader.CurrentDepth != startDepth) && reader.Read())
+                    {
+                    }
 
                     switch (type)
                     {
                         case "candle":
-                            return new CandleResponse(JsonSerializer.Deserialize<CandlePayload>(rawPayload, options), dateTime);
+                            return new CandleResponse(JsonSerializer.Deserialize<CandlePayload>(ref payloadReader, options), dateTime);
                         case "orderbook":
-                            return new OrderbookResponse(JsonSerializer.Deserialize<OrderbookPayload>(rawPayload, options), dateTime);
+                            return new OrderbookResponse(JsonSerializer.Deserialize<OrderbookPayload>(ref payloadReader, options), dateTime);
                         case "instrument_info":
-                            return new InstrumentInfoResponse(JsonSerializer.Deserialize<InstrumentInfoPayload>(rawPayload, options), dateTime);
+                            return new InstrumentInfoResponse(JsonSerializer.Deserialize<InstrumentInfoPayload>(ref payloadReader, options), dateTime);
                         case "error":
-                            return new StreamingErrorResponse(JsonSerializer.Deserialize<StreamingErrorPayload>(rawPayload, options), dateTime);
+                            return new StreamingErrorResponse(JsonSerializer.Deserialize<StreamingErrorPayload>(ref payloadReader, options), dateTime);
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
                 }
-
-                continue;
             }
 
             throw new JsonException();
