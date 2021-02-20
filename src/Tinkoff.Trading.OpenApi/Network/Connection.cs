@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -125,8 +125,10 @@ namespace Tinkoff.Trading.OpenApi.Network
 
             _webSocketTask = Task.Run(async () =>
             {
-                var transferBuffer = new byte[8096];
-                var messageBuffer = new List<byte>();
+                var bufferCapacity = 8192;
+                var transferBuffer = new byte[bufferCapacity];
+                var messageBuffer = new MemoryStream(bufferCapacity);
+                var messageLength = 0;
                 try
                 {
                     while (_webSocket.State == WebSocketState.Open)
@@ -142,16 +144,41 @@ namespace Tinkoff.Trading.OpenApi.Network
                                 StreamingClosed?.Invoke(this, EventArgs.Empty);
                                 return;
                             case WebSocketMessageType.Text:
-                                var receivedBytes = new byte[result.Count];
-                                Array.ConstrainedCopy(buffer.Array, 0, receivedBytes, 0, result.Count);
-                                messageBuffer.AddRange(receivedBytes);
                                 if (result.EndOfMessage)
                                 {
-                                    var data = Encoding.UTF8.GetString(messageBuffer.ToArray());
-                                    var response = JsonSerializer.Deserialize<StreamingResponse>(data, SerializationOptions.Instance);
+                                    StreamingResponse response;
+
+                                    // We can use buffer directly if we got a message without chunking
+                                    // This is almost always the case
+                                    if (messageLength == 0)
+                                    {
+                                        response = JsonSerializer.Deserialize<StreamingResponse>(
+                                            buffer.Array.AsSpan(0, result.Count),
+                                            SerializationOptions.Instance);
+                                    }
+                                    else
+                                    {
+                                        // ReSharper disable once AssignNullToNotNullAttribute
+                                        messageBuffer.Write(buffer.Array, 0, result.Count);
+                                        messageLength += result.Count;
+
+                                        response = JsonSerializer.Deserialize<StreamingResponse>(
+                                            messageBuffer.GetBuffer().AsSpan(0, messageLength),
+                                            SerializationOptions.Instance);
+
+                                        messageBuffer.Position = 0;
+                                        messageLength = 0;
+                                    }
+
                                     OnStreamingEvent(response);
-                                    messageBuffer.Clear();
                                 }
+                                else
+                                {
+                                    // ReSharper disable once AssignNullToNotNullAttribute
+                                    messageBuffer.Write(buffer.Array, 0, result.Count);
+                                    messageLength += result.Count;
+                                }
+
 
                                 break;
                         }
