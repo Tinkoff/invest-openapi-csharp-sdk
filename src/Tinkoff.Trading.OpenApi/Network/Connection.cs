@@ -125,7 +125,7 @@ namespace Tinkoff.Trading.OpenApi.Network
 
             _webSocketTask = Task.Run(async () =>
             {
-                var bufferCapacity = 8096;
+                var bufferCapacity = 8192;
                 var transferBuffer = new byte[bufferCapacity];
                 var messageBuffer = new MemoryStream(bufferCapacity);
                 var messageLength = 0;
