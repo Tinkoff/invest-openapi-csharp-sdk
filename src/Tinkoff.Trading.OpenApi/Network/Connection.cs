@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -75,28 +76,35 @@ namespace Tinkoff.Trading.OpenApi.Network
 
         private static async Task<OpenApiResponse<TOut>> HandleResponseAsync<TOut>(HttpResponseMessage response)
         {
-            string content = string.Empty;
+            byte[] content = default;
+            int contentLength = 0;
+            var arrayPool = ArrayPool<byte>.Shared;
             try
             {
-                if (response.Content != null)
+                if (response.Content?.Headers.ContentLength > 0)
                 {
-                    content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    contentLength = (int) response.Content.Headers.ContentLength;
+                    content = arrayPool.Rent(contentLength);
+                    var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                    await stream.ReadAsync(content, 0, contentLength).ConfigureAwait(false);
                 }
 
                 // .NET Standard 2.0 doesn't have too many requests status code
                 // https://github.com/dotnet/runtime/issues/15650#issue-558031319
-                const HttpStatusCode TooManyRequestsStatusCode = (HttpStatusCode)429;
+                const HttpStatusCode TooManyRequestsStatusCode = (HttpStatusCode) 429;
                 switch (response.StatusCode)
                 {
                     case HttpStatusCode.OK:
-                        return JsonSerializer.Deserialize<OpenApiResponse<TOut>>(content, SerializationOptions.Instance);
+                        return JsonSerializer.Deserialize<OpenApiResponse<TOut>>(content.AsSpan(0, contentLength),
+                            SerializationOptions.Instance);
                     case HttpStatusCode.Unauthorized:
                         throw new OpenApiException("You have no access to that resource.", HttpStatusCode.Unauthorized);
                     case TooManyRequestsStatusCode:
                         throw new OpenApiException("Too many requests.", TooManyRequestsStatusCode);
                     default:
                         var openApiResponse =
-                            JsonSerializer.Deserialize<OpenApiResponse<OpenApiExceptionPayload>>(content, SerializationOptions.Instance);
+                            JsonSerializer.Deserialize<OpenApiResponse<OpenApiExceptionPayload>>(content.AsSpan(0, contentLength),
+                                SerializationOptions.Instance);
                         throw new OpenApiException(
                             openApiResponse.Payload.Message,
                             openApiResponse.Payload.Code,
@@ -110,7 +118,15 @@ namespace Tinkoff.Trading.OpenApi.Network
             }
             catch (Exception e)
             {
-                throw new OpenApiInvalidResponseException("Unable to handle response.", content, e);
+                throw new OpenApiInvalidResponseException("Unable to handle response.",
+                    content == null ? string.Empty : Encoding.UTF8.GetString(content.AsSpan(0, contentLength).ToArray()), e);
+            }
+            finally
+            {
+                if (content != null)
+                {
+                    arrayPool.Return(content);
+                }
             }
         }
 
