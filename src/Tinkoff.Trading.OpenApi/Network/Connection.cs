@@ -53,7 +53,7 @@ namespace Tinkoff.Trading.OpenApi.Network
             var request = new HttpRequestMessage(HttpMethod.Post, uri);
             if (payload != null)
             {
-                var body = JsonSerializer.Serialize(payload, SerializationOptions.Instance);
+                var body = JsonSerializer.Serialize(payload, payload.GetType(), SerializationOptions.Instance);
                 request.Content = new StringContent(body, Encoding.UTF8, "application/json");
             }
 
@@ -67,7 +67,7 @@ namespace Tinkoff.Trading.OpenApi.Network
         {
             await EnsureWebSocketConnectionAsync().ConfigureAwait(false);
 
-            var requestJson = JsonSerializer.Serialize(request, SerializationOptions.Instance);
+            var requestJson = JsonSerializer.Serialize(request, request.GetType(), SerializationOptions.Instance);
             var data = Encoding.UTF8.GetBytes(requestJson);
             var buffer = new ArraySegment<byte>(data);
             await _webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None)
