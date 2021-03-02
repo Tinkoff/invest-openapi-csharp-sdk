@@ -1,10 +1,8 @@
 using System;
 using System.Text.Json;
 using FluentAssertions;
-
 using Tinkoff.Trading.OpenApi.Models;
 using Tinkoff.Trading.OpenApi.Tests.TestHelpers;
-
 using Xunit;
 
 namespace Tinkoff.Trading.OpenApi.Tests
@@ -14,7 +12,9 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public void DeserializeCandleTest()
         {
-            var streamingResponse = JsonSerializer.Deserialize<StreamingResponse>(JsonFile.Read("streaming-candle-response"), new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            var streamingResponse =
+                JsonSerializer.Deserialize<StreamingResponse>(JsonFile.Read("streaming-candle-response"),
+                    SerializationOptions.Instance);
             var response = streamingResponse as StreamingResponse<CandlePayload>;
 
             var expectedResponse = new CandleResponse(
@@ -35,9 +35,21 @@ namespace Tinkoff.Trading.OpenApi.Tests
         [Fact]
         public void DeserializeCandleWithNewValueTest()
         {
-            Action act = () => JsonSerializer.Deserialize<StreamingResponse>(JsonFile.Read("streaming-candle-response-with-new-field"), new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            Action act = () =>
+                JsonSerializer.Deserialize<StreamingResponse>(JsonFile.Read("streaming-candle-response-with-new-field"),
+                    SerializationOptions.Instance);
 
             act.Should().NotThrow("The serialization shouldn't fail if there are new properties in the response");
+        }
+
+        [Fact]
+        public void DeserializeInstrumentInfoPayloadScientificStyleLotTest()
+        {
+            var payload =
+                "{\"figi\":\"BBG000RG4ZQ4\",\"trade_status\":\"normal_trading\",\"min_price_increment\":1e-05,\"lot\":1e+06}";
+
+            Action act = () => JsonSerializer.Deserialize<InstrumentInfoPayload>(payload, SerializationOptions.Instance);
+            act.Should().NotThrow();
         }
     }
 }
