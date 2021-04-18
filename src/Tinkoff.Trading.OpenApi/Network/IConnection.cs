@@ -1,5 +1,6 @@
 using System;
 using System.Net.WebSockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Tinkoff.Trading.OpenApi.Models;
 
@@ -60,6 +61,6 @@ namespace Tinkoff.Trading.OpenApi.Network
         /// </summary>
         /// <param name="request">Запрос.</param>
         /// <typeparam name="TRequest">Тип запроса.</typeparam>
-        Task SendStreamingRequestAsync<TRequest>(TRequest request) where TRequest : StreamingRequest;
+        Task SendStreamingRequestAsync<TRequest>(TRequest request, CancellationToken cancellationToken = default(CancellationToken)) where TRequest : StreamingRequest;
     }
 }

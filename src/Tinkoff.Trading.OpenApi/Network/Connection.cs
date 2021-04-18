@@ -62,15 +62,15 @@ namespace Tinkoff.Trading.OpenApi.Network
             return await HandleResponseAsync<TOut>(response).ConfigureAwait(false);
         }
 
-        public async Task SendStreamingRequestAsync<TRequest>(TRequest request)
+        public async Task SendStreamingRequestAsync<TRequest>(TRequest request, CancellationToken cancellationToken = default(CancellationToken))
             where TRequest : StreamingRequest
         {
-            await EnsureWebSocketConnectionAsync().ConfigureAwait(false);
+            await EnsureWebSocketConnectionAsync(cancellationToken).ConfigureAwait(false);
 
             var requestJson = JsonSerializer.Serialize(request, request.GetType(), SerializationOptions.Instance);
             var data = Encoding.UTF8.GetBytes(requestJson);
             var buffer = new ArraySegment<byte>(data);
-            await _webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None)
+            await _webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -130,14 +130,14 @@ namespace Tinkoff.Trading.OpenApi.Network
             }
         }
 
-        private async Task EnsureWebSocketConnectionAsync()
+        private async Task EnsureWebSocketConnectionAsync(CancellationToken cancellationToken)
         {
             if (_webSocket != null) return;
 
             if (Interlocked.CompareExchange(ref _webSocket, new ClientWebSocket(), null) != null) return;
 
             _webSocket.Options.SetRequestHeader("Authorization", $"Bearer {_token}");
-            await _webSocket.ConnectAsync(_webSocketBaseUri, CancellationToken.None).ConfigureAwait(false);
+            await _webSocket.ConnectAsync(_webSocketBaseUri, cancellationToken).ConfigureAwait(false);
 
             _webSocketTask = Task.Run(async () =>
             {
