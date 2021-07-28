@@ -22,6 +22,7 @@
         "payment": 1504.5,
         "price": 100.3,
         "quantity": 15,
+        "quantityExecuted": 15,
         "figi": "BBG000CL9VN6",
         "instrumentType": "Stock",
         "isMarginCall": true,

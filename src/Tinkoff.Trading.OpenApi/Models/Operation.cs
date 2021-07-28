@@ -14,6 +14,7 @@ namespace Tinkoff.Trading.OpenApi.Models
         public decimal Payment { get; }
         public decimal Price { get; }
         public int Quantity { get; }
+        public int? QuantityExecuted { get; }
         public string Figi { get; }
         public InstrumentType InstrumentType { get; }
         public bool IsMarginCall { get; }
@@ -21,7 +22,7 @@ namespace Tinkoff.Trading.OpenApi.Models
         public ExtendedOperationType OperationType { get; }
 
         [JsonConstructor]
-        public Operation(string id, OperationStatus status, List<Trade> trades, MoneyAmount commission, Currency currency, decimal payment, decimal price, int quantity, string figi, InstrumentType instrumentType, bool isMarginCall, DateTime date, ExtendedOperationType operationType)
+        public Operation(string id, OperationStatus status, List<Trade> trades, MoneyAmount commission, Currency currency, decimal payment, decimal price, int quantity, int? quantityExecuted, string figi, InstrumentType instrumentType, bool isMarginCall, DateTime date, ExtendedOperationType operationType)
         {
             Id = id;
             Status = status;
@@ -31,6 +32,7 @@ namespace Tinkoff.Trading.OpenApi.Models
             Payment = payment;
             Price = price;
             Quantity = quantity;
+            QuantityExecuted = quantityExecuted;
             Figi = figi;
             InstrumentType = instrumentType;
             IsMarginCall = isMarginCall;
