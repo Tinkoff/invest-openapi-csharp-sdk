@@ -23,6 +23,11 @@ namespace Tinkoff.Trading.OpenApi.Network
         private ClientWebSocket _webSocket;
         private Task _webSocketTask;
 
+        protected Connection(string baseUri, string token, HttpClient httpClient) 
+            : this (baseUri, "wss://api-invest.tinkoff.ru/openapi/md/v1/md-openapi/ws", token, httpClient)
+        {
+        }
+
         protected Connection(string baseUri, string webSocketBaseUri, string token, HttpClient httpClient)
         {
             _baseUri = new Uri(baseUri);
@@ -226,6 +231,11 @@ namespace Tinkoff.Trading.OpenApi.Network
 
     public class Connection : Connection<Context>
     {
+        public Connection(string token, HttpClient httpClient)
+            : base("https://api-invest.tinkoff.ru/openapi/", token, httpClient)
+        {
+        }
+
         public Connection(string baseUri, string webSocketBaseUri, string token, HttpClient httpClient)
             : base(baseUri, webSocketBaseUri, token, httpClient)
         {
