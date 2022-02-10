@@ -1,5 +1,7 @@
-﻿using System;
+﻿#if NETCOREAPP3_1
+using System;
 using System.Threading.Tasks;
+#endif
 using Tinkoff.Trading.OpenApi.Models;
 using Tinkoff.Trading.OpenApi.Network;
 

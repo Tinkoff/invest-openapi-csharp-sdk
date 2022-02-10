@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿#if NETCOREAPP3_1
+
+using System.IO;
 using System.Threading.Tasks;
 
 namespace TradingBot
@@ -13,3 +15,15 @@ namespace TradingBot
         }
     }
 }
+
+#endif
+
+#if NET6_0_OR_GREATER
+
+using TradingBot;
+
+var token = (await File.ReadAllTextAsync("token.txt")).Trim();
+await using var bot = new SandboxBot(token);
+await bot.StartAsync();
+
+#endif
