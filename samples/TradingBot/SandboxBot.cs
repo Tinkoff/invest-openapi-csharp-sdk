@@ -41,11 +41,9 @@ namespace TradingBot
             var now = DateTime.Now;
             var candleList = await _context.MarketCandlesAsync(randomInstrument.Figi, now.AddMinutes(-5), now, CandleInterval.Minute);
             foreach (var candle in candleList.Candles)
-            {
                 Console.WriteLine(candle);
-            }
-            Console.WriteLine();
 
+            Console.WriteLine();
             Console.WriteLine("Buy 1 lot");
             await _context.PlaceMarketOrderAsync(new MarketOrder(randomInstrument.Figi, 1, OperationType.Buy,
                 _accountId));
@@ -64,7 +62,8 @@ namespace TradingBot
         {
             var portfolio = await _context.PortfolioCurrenciesAsync(_accountId);
             Console.WriteLine("Balance");
-            foreach (var currency in portfolio.Currencies) Console.WriteLine($"{currency.Balance} {currency.Currency}");
+            foreach (var currency in portfolio.Currencies) 
+                Console.WriteLine($"{currency.Balance} {currency.Currency}");
 
             Console.WriteLine();
         }
